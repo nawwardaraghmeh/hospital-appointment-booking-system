@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Book Appointment</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 30px; background: #eef2f7; }
+  form { max-width: 400px; margin: auto; display: flex; flex-direction: column; gap: 10px; }
+  input, textarea, button { padding: 8px; font-size: 14px; }
+  button { cursor: pointer; background: #4CAF50; color: white; border: none; }
+  p { color: green; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>Book Appointment</h2>
+{{if .Success}}<p>Appointment booked successfully!</p>{{end}}
+<form method="POST">
+  <input name="name" placeholder="Name" required>
+  <input name="pid" placeholder="Patient ID" required>
+  <input name="age" placeholder="Age" required>
+  <input name="phone" placeholder="Phone">
+  <input name="email" placeholder="Email">
+  <textarea name="symptoms" placeholder="Symptoms"></textarea>
+  <button type="submit">Book</button>
+</form>
+<a href="/logout"><button>Logout</button></a>
+</body>
+</html>

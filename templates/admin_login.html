@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Login</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 50px; background: #eef2f7; text-align: center; }
+  form { display: inline-block; text-align: left; padding: 20px; background: white; border-radius: 8px; }
+  input, select, button { padding: 8px; margin: 5px; width: 100%; }
+  button { cursor: pointer; background: #4CAF50; color: white; border: none; }
+</style>
+</head>
+<body>
+<h2>Admin Login</h2>
+<form action="/admin/dashboard" method="GET">
+  <input name="emp_id" placeholder="Employee ID" required>
+  <input name="name" placeholder="Name" required>
+
+  <select id="citySelect" name="city_id" required>
+    <option value="">Select City</option>
+    {{range .Cities}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+  </select>
+
+  <select id="hospitalSelect" name="hospital_id" required>
+    <option value="">Select Hospital</option>
+    {{range .Hospitals}}<option value="{{.ID}}" data-city="{{.CityID}}">{{.Name}}</option>{{end}}
+  </select>
+
+  <button type="submit">Login</button>
+</form>
+
+<script>
+document.getElementById("citySelect").addEventListener("change", function() {
+  let city = this.value;
+  document.querySelectorAll("#hospitalSelect option").forEach(opt => {
+    opt.style.display = (opt.dataset.city === city || opt.value === "") ? "" : "none";
+  });
+  document.getElementById("hospitalSelect").value="";
+});
+</script>
+</body>
+</html>

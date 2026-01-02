@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ABS System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,.1);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button.admin {
+            background: #343a40;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>Hospital Appointment Booking System</h2>
+
+    <button onclick="location.href='/patient/login'">Patient</button>
+    <button class="admin" onclick="location.href='/admin/login'">Admin</button>
+</div>
+</body>
+</html>

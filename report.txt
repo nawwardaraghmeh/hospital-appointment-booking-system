@@ -1,0 +1,32 @@
+Appointment Booking Service (ABS)
+
+Course: Distributed Programming for Web, IoT, and Mobile Systems
+Language: Go
+Database: modernc.org/sqlite (embedded)
+Student Name: Nawwar Daraghmeh - 7199157
+
+1. The Idea
+
+ABS is a web-based system for hospital appointment booking. Patients can view and book slots, while hospital admins can manage slots. The system demonstrates backend Go programming, dynamic web templates, and database integration.
+
+2. Technologies
+
+Go: Backend & HTTP server
+modernc.org/sqlite: Embedded database
+HTML/CSS + JS: Templates, dropdown filtering, basic styling
+
+3. Database Design
+
+Tables for:
+
+City, Hospital, Department – for dropdowns
+Timeslot – appointment slots
+Appointment – patient bookings
+
+4. How to run
+
+In the terminal: 
+go mod tidy
+go run ./cmd/server
+
+Then open http://localhost:8080 in a browser

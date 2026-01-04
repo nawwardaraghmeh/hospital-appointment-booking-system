@@ -5,7 +5,7 @@ import (
 	"database/sql"
 )
 
-func GetAvailableSlots(db *sql.DB, deptID int) ([]entity.TimeSlot, error) {
+func GetAvailableSlots(db *sql.DB, deptID int) ([]entity.Timeslot, error) {
 	rows, err := db.Query(`
 		SELECT id, doctor, room, start_time, duration
 		FROM timeslot
@@ -15,11 +15,18 @@ func GetAvailableSlots(db *sql.DB, deptID int) ([]entity.TimeSlot, error) {
 	}
 	defer rows.Close()
 
-	var slots []entity.TimeSlot
+	var slots []entity.Timeslot
 	for rows.Next() {
-		var s entity.TimeSlot
-		rows.Scan(&s.ID, &s.Doctor, &s.Room, &s.StartTime, &s.Duration)
+		var s entity.Timeslot
+		rows.Scan(
+			&s.ID,
+			&s.Doctor,
+			&s.Room,
+			&s.StartTime,
+			&s.Duration,
+		)
 		slots = append(slots, s)
 	}
+
 	return slots, nil
 }

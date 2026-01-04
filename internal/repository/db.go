@@ -51,7 +51,6 @@ func InitDB() {
 	)`)
 }
 
-// Debug helper
 func PrintTimeslots() {
 	db, _ := OpenDB()
 	defer db.Close()

@@ -162,7 +162,7 @@ func BookAppointment(w http.ResponseWriter, r *http.Request) {
 		)
 		db.Exec(`UPDATE timeslot SET is_booked=1 WHERE id=?`, slotID)
 
-		http.Redirect(w, r, "/patient/slots?department_id="+deptID, http.StatusSeeOther)
+		http.Redirect(w, r, "/patient/slots?department_id="+deptID+"&booked=true", http.StatusSeeOther)
 		return
 	}
 

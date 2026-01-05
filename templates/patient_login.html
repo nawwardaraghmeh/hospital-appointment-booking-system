@@ -26,7 +26,7 @@
 </head>
 <body>
 <h2>Patient Login</h2>
-<form action="/patient/slots" method="GET">
+<form action="/patient/do-login" method="POST">
   <input name="patient_name" placeholder="Name" required>
   <input name="pid" placeholder="Patient ID" required>
 
@@ -49,7 +49,6 @@
 </form>
 
 <script>
-// Filter hospitals based on selected city
 document.getElementById("citySelect").addEventListener("change", function() {
   let city = this.value;
   document.querySelectorAll("#hospitalSelect option").forEach(opt => {
@@ -59,7 +58,6 @@ document.getElementById("citySelect").addEventListener("change", function() {
   document.getElementById("departmentSelect").value = "";
 });
 
-// Filter departments based on selected hospital
 document.getElementById("hospitalSelect").addEventListener("change", function() {
   let hosp = this.value;
   document.querySelectorAll("#departmentSelect option").forEach(opt => {

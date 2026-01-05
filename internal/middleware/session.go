@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 )
 
 func SetSessionCookie(w http.ResponseWriter, userType string, id string) {
@@ -33,13 +34,12 @@ func GetSessionCookie(r *http.Request) (userType string, id string, ok bool) {
 	if err != nil {
 		return "", "", false
 	}
-	parts := []rune(c.Value)
-	for i, ch := range parts {
-		if ch == ':' {
-			return string(parts[:i]), string(parts[i+1:]), true
-		}
+
+	parts := strings.SplitN(c.Value, ":", 2)
+	if len(parts) != 2 {
+		return "", "", false
 	}
-	return "", "", false
+	return parts[0], parts[1], true
 }
 
 func RequireSession(next http.HandlerFunc, allowedUserType string) http.HandlerFunc {

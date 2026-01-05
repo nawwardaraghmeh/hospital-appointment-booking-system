@@ -20,9 +20,25 @@ func InitDB() {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	db.Exec(`CREATE TABLE IF NOT EXISTS city(id INTEGER PRIMARY KEY, name TEXT)`)
-	db.Exec(`CREATE TABLE IF NOT EXISTS hospital(id INTEGER PRIMARY KEY, name TEXT, city_id INTEGER)`)
-	db.Exec(`CREATE TABLE IF NOT EXISTS department(id INTEGER PRIMARY KEY, name TEXT, hospital_id INTEGER)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS city(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        name TEXT UNIQUE
+    )`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS hospital(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        name TEXT, 
+        city_id INTEGER,
+        UNIQUE(name, city_id)
+    )`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS department(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        name TEXT, 
+        hospital_id INTEGER,
+        UNIQUE(name, hospital_id)
+    )`)
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS timeslot(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		department_id INTEGER,

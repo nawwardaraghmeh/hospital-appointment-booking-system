@@ -2,6 +2,7 @@ package handler
 
 import (
 	"abs/internal/entity"
+	"abs/internal/middleware"
 	"abs/internal/repository"
 	"html/template"
 	"net/http"
@@ -13,7 +14,23 @@ func IndexPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutPage(w http.ResponseWriter, r *http.Request) {
+	middleware.ClearSessionCookie(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func PatientLoginAction(w http.ResponseWriter, r *http.Request) {
+	deptID := r.FormValue("department_id")
+	patientID := r.FormValue("pid")
+
+	if deptID == "" || patientID == "" {
+		http.Redirect(w, r, "/patient/login", http.StatusSeeOther)
+		return
+	}
+
+	middleware.SetSessionCookie(w, "patient", patientID)
+
+	target := "/patient/slots?department_id=" + deptID
+	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
 func PatientLoginPage(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +79,8 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	middleware.SetSessionCookie(w, "patient", deptID)
+
 	db, _ := repository.OpenDB()
 	defer db.Close()
 
@@ -96,31 +115,28 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 
 func BookAppointment(w http.ResponseWriter, r *http.Request) {
 	slotID := r.URL.Query().Get("slot_id")
-	success := false
 
 	db, _ := repository.OpenDB()
 	defer db.Close()
 
 	if r.Method == http.MethodPost {
+		var deptID string
+		db.QueryRow("SELECT department_id FROM timeslot WHERE id = ?", slotID).Scan(&deptID)
+
 		db.Exec(`
-			INSERT INTO appointment
-			(timeslot_id, patient_name, patient_id, age, phone, email, symptoms)
-			VALUES (?,?,?,?,?,?,?)`,
-			slotID,
-			r.FormValue("name"),
-			r.FormValue("pid"),
-			r.FormValue("age"),
-			r.FormValue("phone"),
-			r.FormValue("email"),
-			r.FormValue("symptoms"),
+            INSERT INTO appointment (timeslot_id, patient_name, patient_id, age, phone, email, symptoms)
+            VALUES (?,?,?,?,?,?,?)`,
+			slotID, r.FormValue("name"), r.FormValue("pid"), r.FormValue("age"),
+			r.FormValue("phone"), r.FormValue("email"), r.FormValue("symptoms"),
 		)
 		db.Exec(`UPDATE timeslot SET is_booked=1 WHERE id=?`, slotID)
-		success = true
+
+		http.Redirect(w, r, "/patient/slots?department_id="+deptID, http.StatusSeeOther)
+		return
 	}
 
 	t := template.Must(template.ParseFiles("templates/book.html"))
 	t.Execute(w, map[string]interface{}{
-		"SlotID":  slotID,
-		"Success": success,
+		"SlotID": slotID,
 	})
 }

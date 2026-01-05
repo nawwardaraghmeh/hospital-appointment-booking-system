@@ -1,33 +1,34 @@
 package main
 
 import (
+	"abs/internal/handler"
+	"abs/internal/middleware"
+	"abs/internal/repository"
 	"fmt"
 	"log"
 	"net/http"
-
-	"abs/internal/handler"
-	"abs/internal/repository"
 )
 
 func main() {
 	repository.InitDB()
 	repository.SeedData()
 
-	fmt.Println("Current Timeslots in DB:")
-	repository.PrintTimeslots()
+	http.HandleFunc("/patient/login", handler.PatientLoginPage)
+	http.HandleFunc("/admin/login", handler.AdminLoginPage)
+
+	http.HandleFunc("/admin/do-login", handler.AdminLoginAction)
+	http.HandleFunc("/patient/do-login", handler.PatientLoginAction)
+
+	http.HandleFunc("/admin/dashboard", middleware.RequireSession(handler.AdminPage, "admin"))
+	http.HandleFunc("/patient/slots", middleware.RequireSession(handler.PatientSlotsPage, "patient"))
+
+	http.HandleFunc("/admin/add-slot", middleware.RequireSession(handler.AddSlot, "admin"))
+	http.HandleFunc("/book", middleware.RequireSession(handler.BookAppointment, "patient"))
+
+	http.HandleFunc("/admin/login-submit", handler.AdminLoginPost)
 
 	http.HandleFunc("/", handler.IndexPage)
 	http.HandleFunc("/logout", handler.LogoutPage)
-
-	// Patient
-	http.HandleFunc("/patient/login", handler.PatientLoginPage)
-	http.HandleFunc("/patient/slots", handler.PatientSlotsPage)
-	http.HandleFunc("/book", handler.BookAppointment)
-
-	// Admin
-	http.HandleFunc("/admin/login", handler.AdminLoginPage)
-	http.HandleFunc("/admin/dashboard", handler.AdminPage)
-	http.HandleFunc("/admin/add-slot", handler.AddSlot)
 
 	fmt.Println("Server running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

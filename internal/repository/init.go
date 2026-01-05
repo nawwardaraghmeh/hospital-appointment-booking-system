@@ -4,27 +4,40 @@ func SeedData() {
 	db, _ := OpenDB()
 	defer db.Close()
 
-	db.Exec(`INSERT OR IGNORE INTO city(id,name) VALUES (1,'Rome'),(2,'Milan'),(3,'Naples')`)
+	cities := []string{"Rome", "Milan", "Naples", "Florence"}
+	for _, name := range cities {
+		db.Exec(`INSERT OR IGNORE INTO city(name) VALUES (?)`, name)
+	}
 
-	db.Exec(`INSERT OR IGNORE INTO hospital(id,name,city_id) VALUES
-		(1,'San Giovanni',1),
-		(2,'Policlinico',1),
-		(3,'Niguarda',2),
-		(4,'Fatebenefratelli',2),
-		(5,'Ospedale Vecchio',3)
-	`)
+	hospitals := []struct {
+		name string
+		city string
+	}{
+		{"San Giovanni", "Rome"}, {"Policlinico", "Rome"},
+		{"Niguarda", "Milan"}, {"Fatebenefratelli", "Milan"},
+		{"Ospedale Vecchio", "Naples"},
+		{"Santa Maria Nuova", "Florence"}, {"Careggi", "Florence"},
+	}
 
-	db.Exec(`INSERT OR IGNORE INTO department(id,name,hospital_id) VALUES
-		(1,'Cardiology',1),
-		(2,'Neurology',1),
-		(3,'Orthopedics',2),
-		(4,'Dermatology',2),
-		(5,'Pediatrics',3),
-		(6,'Oncology',4),
-		(7,'Radiology',5)
-	`)
+	for _, h := range hospitals {
+		db.Exec(`INSERT OR IGNORE INTO hospital(name, city_id) 
+                SELECT ?, id FROM city WHERE name = ?`, h.name, h.city)
+	}
 
-	db.Exec(`INSERT OR IGNORE INTO admin(emp_id,name,city_id,hospital_id) VALUES
-		('EMP001','Admin One',1,1)
-	`)
+	depts := []string{"Cardiology", "Neurology", "Orthopedics", "Dermatology", "Pediatrics", "Oncology", "Radiology"}
+
+	rows, _ := db.Query("SELECT id FROM hospital")
+	var hospIDs []int
+	for rows.Next() {
+		var id int
+		rows.Scan(&id)
+		hospIDs = append(hospIDs, id)
+	}
+	rows.Close()
+
+	for _, hID := range hospIDs {
+		for _, dName := range depts {
+			db.Exec(`INSERT OR IGNORE INTO department(name, hospital_id) VALUES (?, ?)`, dName, hID)
+		}
+	}
 }

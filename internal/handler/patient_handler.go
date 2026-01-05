@@ -79,17 +79,18 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	middleware.SetSessionCookie(w, "patient", deptID)
+	_, patientID, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/patient/login", http.StatusSeeOther)
+		return
+	}
 
-	db, _ := repository.OpenDB()
+	db, err := repository.OpenDB()
+	if err != nil {
+		http.Error(w, "Database connection error", 500)
+		return
+	}
 	defer db.Close()
-
-	rows, _ := db.Query(`
-		SELECT id, doctor, room, start_time, duration
-		FROM timeslot
-		WHERE department_id=? AND is_booked=0
-	`, deptID)
-	defer rows.Close()
 
 	type Slot struct {
 		ID        int
@@ -98,18 +99,48 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 		StartTime string
 		Duration  int
 	}
-
 	var slots []Slot
+	rows, _ := db.Query(`
+		SELECT id, doctor, room, start_time, duration
+		FROM timeslot
+		WHERE department_id=? AND is_booked=0
+	`, deptID)
+	defer rows.Close()
+
 	for rows.Next() {
 		var s Slot
 		rows.Scan(&s.ID, &s.Doctor, &s.Room, &s.StartTime, &s.Duration)
 		slots = append(slots, s)
 	}
 
+	type MyAppointment struct {
+		Doctor   string
+		Time     string
+		Room     string
+		Symptoms string
+	}
+	var myAppointments []MyAppointment
+	appRows, _ := db.Query(`
+		SELECT t.doctor, t.start_time, t.room, a.symptoms
+		FROM appointment a
+		JOIN timeslot t ON a.timeslot_id = t.id
+		WHERE a.patient_id = ?`, patientID)
+	defer appRows.Close()
+
+	for appRows.Next() {
+		var ma MyAppointment
+		appRows.Scan(&ma.Doctor, &ma.Time, &ma.Room, &ma.Symptoms)
+		myAppointments = append(myAppointments, ma)
+	}
+
+	bookedSuccess := r.URL.Query().Get("booked") == "true"
+
 	t := template.Must(template.ParseFiles("templates/patient_slots.html"))
 	t.Execute(w, map[string]interface{}{
-		"Slots":        slots,
-		"DepartmentID": deptID,
+		"Slots":          slots,
+		"MyAppointments": myAppointments,
+		"DepartmentID":   deptID,
+		"BookedSuccess":  bookedSuccess,
 	})
 }
 

@@ -50,13 +50,13 @@
 
 <h2>My Booked Appointments</h2>
 <table>
-    <tr><th>Doctor</th><th>Time</th><th>Room</th><th>Symptoms</th></tr>
+    <tr><th>Department</th><th>Doctor</th><th>Time</th><th>Room</th></tr>
     {{range .MyAppointments}}
     <tr>
-        <td>{{.Doctor}}</td>
-        <td>{{.Time}}</td>
-        <td>{{.Room}}</td>
-        <td>{{.Symptoms}}</td>
+      <td>{{.DepartmentName}}</td>
+      <td>{{.Doctor}}</td>
+      <td>{{.StartTime}}</td>
+      <td>{{.Room}}</td>
     </tr>
     {{else}}
     <tr><td colspan="4">You have no active appointments.</td></tr>

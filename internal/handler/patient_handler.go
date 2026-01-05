@@ -92,45 +92,36 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	type Slot struct {
-		ID        int
-		Doctor    string
-		Room      string
-		StartTime string
-		Duration  int
-	}
-	var slots []Slot
+	var slots []entity.Timeslot
 	rows, _ := db.Query(`
-		SELECT id, doctor, room, start_time, duration
-		FROM timeslot
-		WHERE department_id=? AND is_booked=0
-	`, deptID)
+        SELECT id, doctor, room, start_time, duration
+        FROM timeslot
+        WHERE department_id=? AND is_booked=0
+    `, deptID)
 	defer rows.Close()
 
 	for rows.Next() {
-		var s Slot
+		var s entity.Timeslot
 		rows.Scan(&s.ID, &s.Doctor, &s.Room, &s.StartTime, &s.Duration)
 		slots = append(slots, s)
 	}
 
-	type MyAppointment struct {
-		Doctor   string
-		Time     string
-		Room     string
-		Symptoms string
-	}
-	var myAppointments []MyAppointment
+	var myAppointments []entity.BookingView
 	appRows, _ := db.Query(`
-		SELECT t.doctor, t.start_time, t.room, a.symptoms
-		FROM appointment a
-		JOIN timeslot t ON a.timeslot_id = t.id
-		WHERE a.patient_id = ?`, patientID)
+        SELECT t.doctor, t.start_time, t.room, a.symptoms, d.name
+        FROM appointment a
+        JOIN timeslot t ON a.timeslot_id = t.id
+        JOIN department d ON t.department_id = d.id
+        WHERE a.patient_id = ?`, patientID)
 	defer appRows.Close()
 
 	for appRows.Next() {
-		var ma MyAppointment
-		appRows.Scan(&ma.Doctor, &ma.Time, &ma.Room, &ma.Symptoms)
-		myAppointments = append(myAppointments, ma)
+		var bv entity.BookingView
+		err := appRows.Scan(&bv.Doctor, &bv.StartTime, &bv.Room, &bv.Symptoms, &bv.DepartmentName)
+		if err != nil {
+			continue
+		}
+		myAppointments = append(myAppointments, bv)
 	}
 
 	bookedSuccess := r.URL.Query().Get("booked") == "true"

@@ -1,14 +1,17 @@
 package repository
 
+// SeedData provides the initial state of the system for testing
 func SeedData() {
 	db, _ := OpenDB()
 	defer db.Close()
 
+	// 1. add cities
 	cities := []string{"Rome", "Milan", "Naples", "Florence"}
 	for _, name := range cities {
 		db.Exec(`INSERT OR IGNORE INTO city(name) VALUES (?)`, name)
 	}
 
+	// 2. add hospitals mapped to cities
 	hospitals := []struct {
 		name string
 		city string
@@ -24,6 +27,7 @@ func SeedData() {
                 SELECT ?, id FROM city WHERE name = ?`, h.name, h.city)
 	}
 
+	// 3. add departments
 	depts := []string{"Cardiology", "Neurology", "Orthopedics", "Dermatology", "Pediatrics", "Oncology", "Radiology"}
 
 	rows, _ := db.Query("SELECT id FROM hospital")

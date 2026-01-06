@@ -1,71 +1,112 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Available Slots</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 30px; background: #eef2f7; }
-  h2 { color: #333; margin-top: 30px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
-  th, td { border: 1px solid #ccc; padding: 12px; text-align: center; }
-  th { background: #4CAF50; color: white; }
-  
-  .btn-green { 
-    cursor: pointer; 
-    background: #4CAF50; 
-    color: white; 
-    border: none; 
-    padding: 8px 15px; 
-    text-decoration: none;
-    font-size: 14px;
-    display: inline-block;
-    border-radius: 4px;
-  }
-  
-  .logout-container { margin-top: 20px; }
-  .success-msg { color: #28a745; font-weight: bold; background: #d4edda; padding: 10px; border-radius: 4px; }
-</style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Available Slots</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 30px;
+        background: #eef2f7;
+      }
+      h2 {
+        color: #333;
+        margin-top: 30px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        background: white;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 12px;
+        text-align: center;
+      }
+      th {
+        background: #4caf50;
+        color: white;
+      }
 
-{{if .BookedSuccess}}
+      .btn-green {
+        cursor: pointer;
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        text-decoration: none;
+        font-size: 14px;
+        display: inline-block;
+        border-radius: 4px;
+      }
+
+      .logout-container {
+        margin-top: 20px;
+      }
+      .success-msg {
+        color: #28a745;
+        font-weight: bold;
+        background: #d4edda;
+        padding: 10px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    {{if .BookedSuccess}}
     <p class="success-msg">✔ Appointment booked successfully!</p>
-{{end}}
-
-<h2>Available Slots</h2>
-<table>
-    <tr><th>Doctor</th><th>Room</th><th>Time</th><th>Duration</th><th>Action</th></tr>
-    {{range .Slots}}
-    <tr>
-      <td>{{.Doctor}}</td>
-      <td>{{.Room}}</td>
-      <td>{{.StartTime}}</td>
-      <td>{{.Duration}} min</td>
-      <td><a href="/book?slot_id={{.ID}}" class="btn-green">Book Now</a></td>
-    </tr>
-    {{else}}
-    <tr><td colspan="5">No slots available for this department.</td></tr>
     {{end}}
-</table>
 
-<h2>My Booked Appointments</h2>
-<table>
-    <tr><th>Department</th><th>Doctor</th><th>Time</th><th>Room</th></tr>
-    {{range .MyAppointments}}
-    <tr>
-      <td>{{.DepartmentName}}</td>
-      <td>{{.Doctor}}</td>
-      <td>{{.StartTime}}</td>
-      <td>{{.Room}}</td>
-    </tr>
-    {{else}}
-    <tr><td colspan="4">You have no active appointments.</td></tr>
-    {{end}}
-</table>
+    <h2>Available Slots</h2>
+    <table>
+      <tr>
+        <th>Doctor</th>
+        <th>Room</th>
+        <th>Time</th>
+        <th>Duration</th>
+        <th>Action</th>
+      </tr>
+      {{range .Slots}}
+      <tr>
+        <td>{{.Doctor}}</td>
+        <td>{{.Room}}</td>
+        <td>{{.StartTime}}</td>
+        <td>{{.Duration}} min</td>
+        <td><a href="/book?slot_id={{.ID}}" class="btn-green">Book Now</a></td>
+      </tr>
+      {{else}}
+      <tr>
+        <td colspan="5">No slots available for this department.</td>
+      </tr>
+      {{end}}
+    </table>
 
-<div class="logout-container">
-    <a href="/logout"><button class="btn-green">Logout</button></a>
-</div>
+    <h2>My Booked Appointments</h2>
+    <table>
+      <tr>
+        <th>Department</th>
+        <th>Doctor</th>
+        <th>Time</th>
+        <th>Room</th>
+      </tr>
+      {{range .MyAppointments}}
+      <tr>
+        <td>{{.DepartmentName}}</td>
+        <td>{{.Doctor}}</td>
+        <td>{{.StartTime}}</td>
+        <td>{{.Room}}</td>
+      </tr>
+      {{else}}
+      <tr>
+        <td colspan="4">You have no active appointments.</td>
+      </tr>
+      {{end}}
+    </table>
 
-</body>
+    <div class="logout-container">
+      <a href="/logout"><button class="btn-green">Logout</button></a>
+    </div>
+  </body>
 </html>

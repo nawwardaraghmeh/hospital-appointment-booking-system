@@ -1,51 +1,104 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Admin Dashboard</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; background: #eef2f7; }
-  h2, h3 { color: #333; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-  th { background: #4CAF50; color: white; }
-  form { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-  input, select, button { padding: 5px; font-size: 14px; }
-  button { cursor: pointer; background: #4CAF50; color: white; border: none; }
-</style>
-</head>
-<body>
-<h2>Admin Dashboard</h2>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Dashboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #eef2f7;
+      }
+      h2,
+      h3 {
+        color: #333;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background: #4caf50;
+        color: white;
+      }
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+      input,
+      select,
+      button {
+        padding: 5px;
+        font-size: 14px;
+      }
+      button {
+        cursor: pointer;
+        background: #4caf50;
+        color: white;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Admin Dashboard</h2>
 
-<h3>Add Timeslot</h3>
-<form action="/admin/add-slot" method="POST">
-  <select name="department_id" required>
-    <option value="">Select Department</option>
-    {{range .Departments}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
-  </select>
-  <input name="doctor" placeholder="Doctor Name" required>
-  <input name="room" placeholder="Room" required>
-  <input name="start_time" type="datetime-local" required>
-  <input name="duration" type="number" placeholder="Duration (min)" required>
-  <button type="submit">Add Slot</button>
-</form>
+    <h3>Add Timeslot</h3>
+    <form action="/admin/add-slot" method="POST">
+      <select name="department_id" required>
+        <option value="">Select Department</option>
+        {{range .Departments}}
+        <option value="{{.ID}}">{{.Name}}</option>
+        {{end}}
+      </select>
+      <input name="doctor" placeholder="Doctor Name" required />
+      <input name="room" placeholder="Room" required />
+      <input name="start_time" type="datetime-local" required />
+      <input
+        name="duration"
+        type="number"
+        placeholder="Duration (min)"
+        required
+      />
+      <button type="submit">Add Slot</button>
+    </form>
 
-<h3>Existing Slots</h3>
-<table>
-<tr><th>Department</th><th>Doctor</th><th>Room</th><th>Time</th><th>Duration</th><th>Booked?</th><th>Patient</th></tr>
-{{range .Timeslots}}
-<tr>
-<td>{{.Department}}</td>
-<td>{{.Doctor}}</td>
-<td>{{.Room}}</td>
-<td>{{.StartTime}}</td>
-<td>{{.Duration}}</td>
-<td>{{.IsBooked}}</td>
-<td>{{.Patient}}</td>
-</tr>
-{{else}}<tr><td colspan="7">No timeslots</td></tr>{{end}}
-</table>
+    <h3>Existing Slots</h3>
+    <table>
+      <tr>
+        <th>Department</th>
+        <th>Doctor</th>
+        <th>Room</th>
+        <th>Time</th>
+        <th>Duration</th>
+        <th>Booked?</th>
+        <th>Patient</th>
+      </tr>
+      {{range .Timeslots}}
+      <tr>
+        <td>{{.Department}}</td>
+        <td>{{.Doctor}}</td>
+        <td>{{.Room}}</td>
+        <td>{{.StartTime}}</td>
+        <td>{{.Duration}}</td>
+        <td>{{.IsBooked}}</td>
+        <td>{{.Patient}}</td>
+      </tr>
+      {{else}}
+      <tr>
+        <td colspan="7">No timeslots</td>
+      </tr>
+      {{end}}
+    </table>
 
-<a href="/logout"><button>Logout</button></a>
-</body>
+    <a href="/logout"><button>Logout</button></a>
+  </body>
 </html>

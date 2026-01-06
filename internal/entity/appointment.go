@@ -1,5 +1,6 @@
 package entity
 
+// this entity represents the data stored when a patient successfully books a slot.
 type Appointment struct {
 	TimeSlotID  int
 	PatientID   string

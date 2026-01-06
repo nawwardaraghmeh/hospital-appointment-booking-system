@@ -1,5 +1,13 @@
 package handler
 
+/*
+  NOTE:
+  the functions in this file are currently defined but not used
+  this layer was implemented to demonstrate the system's readiness to allow external clients (e.g., mobile apps
+  or third-party medical services) to use raw JSON data.
+  and to support a future migration to a fully decoupled frontend
+*/
+
 import (
 	"abs/internal/repository"
 	"encoding/json"

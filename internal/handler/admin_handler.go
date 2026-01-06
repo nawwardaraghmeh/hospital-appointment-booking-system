@@ -8,6 +8,7 @@ import (
 	"net/http"
 )
 
+// AdminLoginPage loads cities and hospitals for dynamic login dropdowns
 func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
 	db, _ := repository.OpenDB()
 	defer db.Close()
@@ -37,6 +38,8 @@ func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// AdminLoginAction creates the session cookie
+// hospital ID was used here to eliminate the need for admins table, for simplicity
 func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		hospID := r.FormValue("hospital_id")
@@ -47,16 +50,17 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func AdminLoginPost(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		empID := r.FormValue("emp_id")
-		middleware.SetSessionCookie(w, "admin", empID)
-		http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
-		return
-	}
-	http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
-}
+// func AdminLoginPost(w http.ResponseWriter, r *http.Request) {
+// 	if r.Method == http.MethodPost {
+// 		empID := r.FormValue("emp_id")
+// 		middleware.SetSessionCookie(w, "admin", empID)
+// 		http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+// 		return
+// 	}
+// 	http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+// }
 
+// AdminPage displays all appointment slots for the logged-in admin's hospital
 func AdminPage(w http.ResponseWriter, r *http.Request) {
 	_, hospID, _ := middleware.GetSessionCookie(r)
 
@@ -70,7 +74,7 @@ func AdminPage(w http.ResponseWriter, r *http.Request) {
         FROM timeslot t
         JOIN department d ON t.department_id = d.id
         LEFT JOIN appointment a ON t.id = a.timeslot_id
-        WHERE d.hospital_id = ?`, hospID) 
+        WHERE d.hospital_id = ?`, hospID)
 	defer rows.Close()
 
 	for rows.Next() {
@@ -98,6 +102,7 @@ func AdminPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// AddSlot handles the creation of new timeslots
 func AddSlot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)

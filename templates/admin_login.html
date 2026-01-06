@@ -1,78 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Admin Login</title>
-<style>
-body { 
-    font-family: Arial, sans-serif; 
-    padding: 50px; 
-    background: #eef2f7; 
-    text-align: center; 
-  }
-  
-  form { 
-    display: inline-block; 
-    text-align: left; 
-    padding: 20px; 
-    background: white; 
-    border-radius: 8px; 
-    width: 350px; /* Standardized width */
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  }
-  
-  h2 { color: #333; }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Login</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 50px;
+        background: #eef2f7;
+        text-align: center;
+      }
 
-  input, select, button { 
-    padding: 10px; 
-    margin: 8px 0; 
-    width: 100%; 
-    box-sizing: border-box; 
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  button { 
-    cursor: pointer; 
-    background: #4CAF50; 
-    color: white; 
-    border: none; 
-    font-weight: bold;
-    margin-top: 15px;
-  }
+      form {
+        display: inline-block;
+        text-align: left;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        width: 350px; /* Standardized width */
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
 
-  button:hover {
-    background: #45a049;
-  }
-</style>
-</head>
-<body>
-<h2>Admin Login</h2>
-<form action="/admin/do-login" method="POST">
-  <input name="emp_id" placeholder="Employee ID" required>
-  <input name="name" placeholder="Name" required>
+      h2 {
+        color: #333;
+      }
 
-  <select id="citySelect" name="city_id" required>
-    <option value="">Select City</option>
-    {{range .Cities}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
-  </select>
+      input,
+      select,
+      button {
+        padding: 10px;
+        margin: 8px 0;
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
 
-  <select id="hospitalSelect" name="hospital_id" required>
-    <option value="">Select Hospital</option>
-    {{range .Hospitals}}<option value="{{.ID}}" data-city="{{.CityID}}">{{.Name}}</option>{{end}}
-  </select>
+      button {
+        cursor: pointer;
+        background: #4caf50;
+        color: white;
+        border: none;
+        font-weight: bold;
+        margin-top: 15px;
+      }
 
-  <button type="submit">Login</button>
-</form>
+      button:hover {
+        background: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Admin Login</h2>
+    <form action="/admin/do-login" method="POST">
+      <input name="emp_id" placeholder="Employee ID" required />
+      <input name="name" placeholder="Name" required />
 
-<script>
-document.getElementById("citySelect").addEventListener("change", function() {
-  let city = this.value;
-  document.querySelectorAll("#hospitalSelect option").forEach(opt => {
-    opt.style.display = (opt.dataset.city === city || opt.value === "") ? "" : "none";
-  });
-  document.getElementById("hospitalSelect").value="";
-});
-</script>
-</body>
+      <select id="citySelect" name="city_id" required>
+        <option value="">Select City</option>
+        {{range .Cities}}
+        <option value="{{.ID}}">{{.Name}}</option>
+        {{end}}
+      </select>
+
+      <select id="hospitalSelect" name="hospital_id" required>
+        <option value="">Select Hospital</option>
+        {{range .Hospitals}}
+        <option value="{{.ID}}" data-city="{{.CityID}}">{{.Name}}</option>
+        {{end}}
+      </select>
+
+      <button type="submit">Login</button>
+    </form>
+
+    <script>
+      document
+        .getElementById("citySelect")
+        .addEventListener("change", function () {
+          let city = this.value;
+          document.querySelectorAll("#hospitalSelect option").forEach((opt) => {
+            opt.style.display =
+              opt.dataset.city === city || opt.value === "" ? "" : "none";
+          });
+          document.getElementById("hospitalSelect").value = "";
+        });
+    </script>
+  </body>
 </html>

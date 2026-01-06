@@ -4,8 +4,10 @@ import (
 	"abs/internal/entity"
 	"abs/internal/middleware"
 	"abs/internal/repository"
+	"abs/internal/service"
 	"html/template"
 	"net/http"
+	"strconv"
 )
 
 func IndexPage(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +20,7 @@ func LogoutPage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// PatientLoginAction validates the login form and establishes a patient session
 func PatientLoginAction(w http.ResponseWriter, r *http.Request) {
 	deptID := r.FormValue("department_id")
 	patientID := r.FormValue("pid")
@@ -33,6 +36,7 @@ func PatientLoginAction(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
+// PatientLoginPage loads all data for the dynamic population of dropdown menus
 func PatientLoginPage(w http.ResponseWriter, r *http.Request) {
 	db, _ := repository.OpenDB()
 	defer db.Close()
@@ -72,6 +76,7 @@ func PatientLoginPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// PatientSlotsPage shows 1. available slots, and 2. the patient's existing bookings.
 func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 	deptID := r.URL.Query().Get("department_id")
 	if deptID == "" {
@@ -92,6 +97,7 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
+	// 1. fetch unbooked slots for the chosen department
 	var slots []entity.Timeslot
 	rows, _ := db.Query(`
         SELECT id, doctor, room, start_time, duration
@@ -106,6 +112,7 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 		slots = append(slots, s)
 	}
 
+	// 2. fetch the appointments the logged-in patient booked
 	var myAppointments []entity.BookingView
 	appRows, _ := db.Query(`
         SELECT t.doctor, t.start_time, t.room, a.symptoms, d.name
@@ -135,23 +142,40 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// BookAppointment processes the booking form and updates the slot status
 func BookAppointment(w http.ResponseWriter, r *http.Request) {
-	slotID := r.URL.Query().Get("slot_id")
+	slotIDStr := r.URL.Query().Get("slot_id")
+
+	slotID, err := strconv.Atoi(slotIDStr)
+	if err != nil {
+		http.Error(w, "Invalid Slot ID", http.StatusBadRequest)
+		return
+	}
 
 	db, _ := repository.OpenDB()
 	defer db.Close()
 
 	if r.Method == http.MethodPost {
+		age, _ := strconv.Atoi(r.FormValue("age"))
+
+		appt := entity.Appointment{
+			TimeSlotID:  slotID,
+			PatientID:   r.FormValue("pid"),
+			PatientName: r.FormValue("name"),
+			Age:         age,
+			Phone:       r.FormValue("phone"),
+			Email:       r.FormValue("email"),
+			Symptoms:    r.FormValue("symptoms"),
+		}
+
+		err := service.Reserve(db, appt)
+		if err != nil {
+			http.Error(w, "Booking failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		var deptID string
 		db.QueryRow("SELECT department_id FROM timeslot WHERE id = ?", slotID).Scan(&deptID)
-
-		db.Exec(`
-            INSERT INTO appointment (timeslot_id, patient_name, patient_id, age, phone, email, symptoms)
-            VALUES (?,?,?,?,?,?,?)`,
-			slotID, r.FormValue("name"), r.FormValue("pid"), r.FormValue("age"),
-			r.FormValue("phone"), r.FormValue("email"), r.FormValue("symptoms"),
-		)
-		db.Exec(`UPDATE timeslot SET is_booked=1 WHERE id=?`, slotID)
 
 		http.Redirect(w, r, "/patient/slots?department_id="+deptID+"&booked=true", http.StatusSeeOther)
 		return

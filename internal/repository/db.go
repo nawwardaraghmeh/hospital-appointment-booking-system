@@ -2,12 +2,12 @@ package repository
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	_ "modernc.org/sqlite"
 )
 
+// OpenDB opens a connection to the SQLite database
 func OpenDB() (*sql.DB, error) {
 	db, err := sql.Open("sqlite", "./data/abs.db")
 	if err != nil {
@@ -16,6 +16,7 @@ func OpenDB() (*sql.DB, error) {
 	return db, err
 }
 
+// InitDB sets up the database schema
 func InitDB() {
 	db, _ := OpenDB()
 	defer db.Close()
@@ -58,29 +59,4 @@ func InitDB() {
 		email TEXT,
 		symptoms TEXT
 	)`)
-	db.Exec(`CREATE TABLE IF NOT EXISTS admin(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		emp_id TEXT UNIQUE,
-		name TEXT,
-		city_id INTEGER,
-		hospital_id INTEGER
-	)`)
-}
-
-func PrintTimeslots() {
-	db, _ := OpenDB()
-	defer db.Close()
-
-	rows, _ := db.Query(`
-        SELECT id, department_id, doctor, room, start_time, duration, is_booked
-        FROM timeslot
-    `)
-	defer rows.Close()
-
-	for rows.Next() {
-		var id, deptID, duration, isBooked int
-		var doctor, room, start string
-		rows.Scan(&id, &deptID, &doctor, &room, &start, &duration, &isBooked)
-		fmt.Println(id, deptID, doctor, room, start, duration, isBooked)
-	}
 }

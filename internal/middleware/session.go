@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// SetSessionCookie creates a cookie to track user state
 func SetSessionCookie(w http.ResponseWriter, userType string, id string) {
 	cookie := http.Cookie{
 		Name:     "abs_session",
@@ -17,6 +18,7 @@ func SetSessionCookie(w http.ResponseWriter, userType string, id string) {
 	http.SetCookie(w, &cookie)
 }
 
+// ClearSessionCookie logs the user out by instructing the browser to delete the cookie
 func ClearSessionCookie(w http.ResponseWriter) {
 	cookie := http.Cookie{
 		Name:     "abs_session",
@@ -29,6 +31,7 @@ func ClearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &cookie)
 }
 
+// GetSessionCookie retrieves and parses the session data
 func GetSessionCookie(r *http.Request) (userType string, id string, ok bool) {
 	c, err := r.Cookie("abs_session")
 	if err != nil {
@@ -42,6 +45,7 @@ func GetSessionCookie(r *http.Request) (userType string, id string, ok bool) {
 	return parts[0], parts[1], true
 }
 
+// RequireSession wraps a route handler and ensures only users with the correct role can enter.
 func RequireSession(next http.HandlerFunc, allowedUserType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userType, _, ok := GetSessionCookie(r)

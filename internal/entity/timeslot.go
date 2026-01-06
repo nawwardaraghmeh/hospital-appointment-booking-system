@@ -1,5 +1,6 @@
 package entity
 
+// this entity represents an available or booked appointment created by admin
 type Timeslot struct {
 	ID         int
 	Department string

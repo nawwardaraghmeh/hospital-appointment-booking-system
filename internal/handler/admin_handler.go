@@ -38,31 +38,13 @@ func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AdminLoginAction creates the session cookie
-// hospital ID was used here to eliminate the need for admins table, for simplicity
-func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		hospID := r.FormValue("hospital_id")
-
-		middleware.SetSessionCookie(w, "admin", hospID)
-
-		http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
-	}
-}
-
-// func AdminLoginPost(w http.ResponseWriter, r *http.Request) {
-// 	if r.Method == http.MethodPost {
-// 		empID := r.FormValue("emp_id")
-// 		middleware.SetSessionCookie(w, "admin", empID)
-// 		http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
-// 		return
-// 	}
-// 	http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
-// }
-
 // AdminPage displays all appointment slots for the logged-in admin's hospital
 func AdminPage(w http.ResponseWriter, r *http.Request) {
-	_, hospID, _ := middleware.GetSessionCookie(r)
+	_, _, hospID, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+		return
+	}
 
 	db, _ := repository.OpenDB()
 	defer db.Close()
@@ -122,5 +104,5 @@ func AddSlot(w http.ResponseWriter, r *http.Request) {
 		r.FormValue("duration"),
 	)
 
-	http.Redirect(w, r, "/admin/dashboard", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }

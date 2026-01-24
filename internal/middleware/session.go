@@ -32,24 +32,24 @@ func ClearSessionCookie(w http.ResponseWriter) {
 }
 
 // GetSessionCookie retrieves and parses the session data
-func GetSessionCookie(r *http.Request) (userType string, id string, ok bool) {
+func GetSessionCookie(r *http.Request) (role string, id string, hospID string, ok bool) {
 	c, err := r.Cookie("abs_session")
 	if err != nil {
-		return "", "", false
+		return "", "", "", false
 	}
 
-	parts := strings.SplitN(c.Value, ":", 2)
-	if len(parts) != 2 {
-		return "", "", false
+	parts := strings.Split(c.Value, ":")
+	if len(parts) != 3 {
+		return "", "", "", false
 	}
-	return parts[0], parts[1], true
+	return parts[0], parts[1], parts[2], true
 }
 
-// RequireSession wraps a route handler and ensures only users with the correct role can enter.
+// RequireSession wraps a route handler and ensures only users with the correct role can enter
 func RequireSession(next http.HandlerFunc, allowedUserType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userType, _, ok := GetSessionCookie(r)
-		if !ok || userType != allowedUserType {
+		role, _, _, ok := GetSessionCookie(r)
+		if !ok || role != allowedUserType {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}

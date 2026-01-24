@@ -59,4 +59,13 @@ func InitDB() {
 		email TEXT,
 		symptoms TEXT
 	)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,   
+    password_hash TEXT,     
+    role TEXT,              
+    full_name TEXT,
+    hospital_id INTEGER,    
+    FOREIGN KEY(hospital_id) REFERENCES hospital(id)
+)`)
 }

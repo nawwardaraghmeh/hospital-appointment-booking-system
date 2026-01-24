@@ -10,32 +10,37 @@ import (
 )
 
 func main() {
-	// setup schema
+	// database setup
 	repository.InitDB()
-	// populate db
 	repository.SeedData()
 
-	// public routes: ones accessible by anyone
-	http.HandleFunc("/", handler.IndexPage)
+	// public routes
+	http.HandleFunc("/", handler.HomePage)
+	http.HandleFunc("/register", handler.RegisterPage)
+	http.HandleFunc("/do-register", handler.RegisterAction)
+
+	// specific login views for admin/patient
 	http.HandleFunc("/patient/login", handler.PatientLoginPage)
 	http.HandleFunc("/admin/login", handler.AdminLoginPage)
 
-	// auth actions: handle POST requests
-	http.HandleFunc("/admin/do-login", handler.AdminLoginAction)
-	http.HandleFunc("/patient/do-login", handler.PatientLoginAction)
+	// universal login
+	http.HandleFunc("/do-login", handler.LoginAction)
 
-	// protected admin routes
-	http.HandleFunc("/admin/dashboard", middleware.RequireSession(handler.AdminPage, "admin"))
+	// protected Admin Routes
+	http.HandleFunc("/admin", middleware.RequireSession(handler.AdminPage, "admin"))
 	http.HandleFunc("/admin/add-slot", middleware.RequireSession(handler.AddSlot, "admin"))
 
-	// protected patient routes
+	// protected Patient Routes
 	http.HandleFunc("/patient/slots", middleware.RequireSession(handler.PatientSlotsPage, "patient"))
 	http.HandleFunc("/book", middleware.RequireSession(handler.BookAppointment, "patient"))
 
-	// session termination
-	http.HandleFunc("/logout", handler.LogoutPage)
+	// session Termination
+	http.HandleFunc("/logout", handler.Logout)
 
-	// server setup
+	// static Files
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+
 	fmt.Println("Server running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

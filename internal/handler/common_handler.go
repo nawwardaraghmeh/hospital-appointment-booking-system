@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"abs/internal/middleware"
 	"html/template"
 	"net/http"
 )
@@ -13,5 +14,6 @@ func HomePage(w http.ResponseWriter, r *http.Request) {
 
 // Logout destroys the session cookie and redirects back home
 func Logout(w http.ResponseWriter, r *http.Request) {
+	middleware.ClearSessionCookie(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

@@ -10,32 +10,6 @@ import (
 	"strconv"
 )
 
-func IndexPage(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.ParseFiles("templates/index.html"))
-	t.Execute(w, nil)
-}
-
-func LogoutPage(w http.ResponseWriter, r *http.Request) {
-	middleware.ClearSessionCookie(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-// PatientLoginAction validates the login form and establishes a patient session
-func PatientLoginAction(w http.ResponseWriter, r *http.Request) {
-	deptID := r.FormValue("department_id")
-	patientID := r.FormValue("pid")
-
-	if deptID == "" || patientID == "" {
-		http.Redirect(w, r, "/patient/login", http.StatusSeeOther)
-		return
-	}
-
-	middleware.SetSessionCookie(w, "patient", patientID)
-
-	target := "/patient/slots?department_id=" + deptID
-	http.Redirect(w, r, target, http.StatusSeeOther)
-}
-
 // PatientLoginPage loads all data for the dynamic population of dropdown menus
 func PatientLoginPage(w http.ResponseWriter, r *http.Request) {
 	db, _ := repository.OpenDB()
@@ -84,7 +58,7 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, patientID, ok := middleware.GetSessionCookie(r)
+	_, patientID, _, ok := middleware.GetSessionCookie(r)
 	if !ok {
 		http.Redirect(w, r, "/patient/login", http.StatusSeeOther)
 		return
@@ -115,11 +89,11 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 	// 2. fetch the appointments the logged-in patient booked
 	var myAppointments []entity.BookingView
 	appRows, _ := db.Query(`
-        SELECT t.doctor, t.start_time, t.room, a.symptoms, d.name
-        FROM appointment a
-        JOIN timeslot t ON a.timeslot_id = t.id
-        JOIN department d ON t.department_id = d.id
-        WHERE a.patient_id = ?`, patientID)
+		SELECT t.doctor, t.start_time, t.room, a.symptoms, d.name
+		FROM appointment a
+		JOIN timeslot t ON a.timeslot_id = t.id
+		JOIN department d ON t.department_id = d.id
+		WHERE a.patient_id = ?`, patientID)
 	defer appRows.Close()
 
 	for appRows.Next() {
@@ -145,10 +119,11 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 // BookAppointment processes the booking form and updates the slot status
 func BookAppointment(w http.ResponseWriter, r *http.Request) {
 	slotIDStr := r.URL.Query().Get("slot_id")
+	slotID, _ := strconv.Atoi(slotIDStr)
 
-	slotID, err := strconv.Atoi(slotIDStr)
-	if err != nil {
-		http.Error(w, "Invalid Slot ID", http.StatusBadRequest)
+	_, userID, _, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -160,7 +135,7 @@ func BookAppointment(w http.ResponseWriter, r *http.Request) {
 
 		appt := entity.Appointment{
 			TimeSlotID:  slotID,
-			PatientID:   r.FormValue("pid"),
+			PatientID:   userID,
 			PatientName: r.FormValue("name"),
 			Age:         age,
 			Phone:       r.FormValue("phone"),
@@ -170,19 +145,16 @@ func BookAppointment(w http.ResponseWriter, r *http.Request) {
 
 		err := service.Reserve(db, appt)
 		if err != nil {
-			http.Error(w, "Booking failed: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Booking failed", 500)
 			return
 		}
 
 		var deptID string
 		db.QueryRow("SELECT department_id FROM timeslot WHERE id = ?", slotID).Scan(&deptID)
-
 		http.Redirect(w, r, "/patient/slots?department_id="+deptID+"&booked=true", http.StatusSeeOther)
 		return
 	}
 
 	t := template.Must(template.ParseFiles("templates/book.html"))
-	t.Execute(w, map[string]interface{}{
-		"SlotID": slotID,
-	})
+	t.Execute(w, map[string]interface{}{"SlotID": slotID})
 }

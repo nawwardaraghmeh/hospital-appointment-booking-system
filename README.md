@@ -11,5 +11,5 @@ Go 1.21 or higher.
 3. Initialize & Start: Run the server.
    The first time you run this, the InitDB() and SeedData() functions called in main.go will automatically build your tables and populate the cities/hospitals.
    `go run cmd/server/main.go`
-4. Access the systnen by openning the following link in your browser:
+4. Access the system by openning the following link in your browser:
    http://localhost:8080

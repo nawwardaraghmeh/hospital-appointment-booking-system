@@ -30,42 +30,48 @@ func InitDB() {
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         name TEXT, 
         city_id INTEGER,
-        UNIQUE(name, city_id)
+        UNIQUE(name, city_id),
+        FOREIGN KEY(city_id) REFERENCES city(id)
     )`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS department(
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         name TEXT, 
         hospital_id INTEGER,
-        UNIQUE(name, hospital_id)
+        UNIQUE(name, hospital_id),
+        FOREIGN KEY(hospital_id) REFERENCES hospital(id)
     )`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS timeslot(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		department_id INTEGER,
-		doctor TEXT,
-		room TEXT,
-		start_time TEXT,
-		duration INTEGER,
-		is_booked INTEGER DEFAULT 0
-	)`)
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        department_id INTEGER,
+        doctor TEXT,
+        room TEXT,
+        start_time TEXT,
+        duration INTEGER,
+        is_booked INTEGER DEFAULT 0,
+        FOREIGN KEY(department_id) REFERENCES department(id)
+    )`)
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS appointment(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		timeslot_id INTEGER,
-		patient_name TEXT,
-		patient_id TEXT,
-		age INTEGER,
-		phone TEXT,
-		email TEXT,
-		symptoms TEXT
-	)`)
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timeslot_id INTEGER,
+        patient_name TEXT,
+        patient_id TEXT,
+        age INTEGER,
+        phone TEXT,
+        email TEXT,
+        symptoms TEXT,
+        FOREIGN KEY(timeslot_id) REFERENCES timeslot(id)
+    )`)
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,   
-    password_hash TEXT,     
-    role TEXT,              
-    full_name TEXT,
-    hospital_id INTEGER,    
-    FOREIGN KEY(hospital_id) REFERENCES hospital(id)
-)`)
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,    
+        password_hash TEXT,      
+        role TEXT,               
+        full_name TEXT,
+        hospital_id INTEGER,     
+        FOREIGN KEY(hospital_id) REFERENCES hospital(id)
+    )`)
 }

@@ -26,18 +26,18 @@ func main() {
 	// universal login
 	http.HandleFunc("/do-login", handler.LoginAction)
 
-	// protected Admin Routes
+	// protected admin routes
 	http.HandleFunc("/admin", middleware.RequireSession(handler.AdminPage, "admin"))
 	http.HandleFunc("/admin/add-slot", middleware.RequireSession(handler.AddSlot, "admin"))
 
-	// protected Patient Routes
+	// protected patient routes
 	http.HandleFunc("/patient/slots", middleware.RequireSession(handler.PatientSlotsPage, "patient"))
 	http.HandleFunc("/book", middleware.RequireSession(handler.BookAppointment, "patient"))
 
-	// session Termination
+	// session termination
 	http.HandleFunc("/logout", handler.Logout)
 
-	// static Files
+	// static file
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 

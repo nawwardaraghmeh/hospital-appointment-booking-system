@@ -50,7 +50,9 @@
   </head>
   <body>
     <h2>Admin Dashboard</h2>
-
+    <div style="background: #343a40; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0;">Welcome, <strong>{{.AdminName}}</strong> | Admin Panel for <strong>{{.HospitalName}}</strong></p>
+    </div>
     <h3>Add Timeslot</h3>
     <form action="/admin/add-slot" method="POST">
       <select name="department_id" required>
@@ -89,7 +91,7 @@
         <td>{{.Room}}</td>
         <td>{{.StartTime}}</td>
         <td>{{.Duration}}</td>
-        <td>{{.IsBooked}}</td>
+        <td>{{if .IsBooked}}<span style="color: red;">Yes</span>{{else}}<span style="color: green;">No</span>{{end}}</td>
         <td>{{.Patient}}</td>
       </tr>
       {{else}}

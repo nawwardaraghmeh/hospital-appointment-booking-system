@@ -71,6 +71,14 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
+	var patientName, deptName, hospName string
+	db.QueryRow("SELECT full_name FROM users WHERE id = ?", patientID).Scan(&patientName)
+	db.QueryRow(`
+        SELECT d.name, h.name 
+        FROM department d 
+        JOIN hospital h ON d.hospital_id = h.id 
+        WHERE d.id = ?`, deptID).Scan(&deptName, &hospName)
+
 	// 1. fetch unbooked slots for the chosen department
 	var slots []entity.Timeslot
 	rows, _ := db.Query(`
@@ -109,6 +117,9 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 
 	t := template.Must(template.ParseFiles("templates/patient_slots.html"))
 	t.Execute(w, map[string]interface{}{
+		"PatientName":    patientName,
+		"HospitalName":   hospName,
+		"DepartmentName": deptName,
 		"Slots":          slots,
 		"MyAppointments": myAppointments,
 		"DepartmentID":   deptID,

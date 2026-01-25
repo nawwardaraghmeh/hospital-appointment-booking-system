@@ -55,6 +55,10 @@
     </style>
   </head>
   <body>
+    <div style="background: #4caf50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0;">Patient: <strong>{{.PatientName}}</strong></p>
+        <p style="margin: 0; font-size: 0.9em;">Viewing: {{.DepartmentName}} at {{.HospitalName}}</p>
+    </div>
     {{if .BookedSuccess}}
     <p class="success-msg">✔ Appointment booked successfully!</p>
     {{end}}

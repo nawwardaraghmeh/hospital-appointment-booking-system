@@ -9,35 +9,6 @@ import (
 )
 
 // AdminLoginPage loads cities and hospitals for dynamic login dropdowns
-// func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
-// 	db, _ := repository.OpenDB()
-// 	defer db.Close()
-
-// 	var cities []entity.City
-// 	rows, _ := db.Query("SELECT id, name FROM city")
-// 	defer rows.Close()
-// 	for rows.Next() {
-// 		var c entity.City
-// 		rows.Scan(&c.ID, &c.Name)
-// 		cities = append(cities, c)
-// 	}
-
-// 	var hospitals []entity.Hospital
-// 	hrows, _ := db.Query("SELECT id, name, city_id FROM hospital")
-// 	defer hrows.Close()
-// 	for hrows.Next() {
-// 		var h entity.Hospital
-// 		hrows.Scan(&h.ID, &h.Name, &h.CityID)
-// 		hospitals = append(hospitals, h)
-// 	}
-
-// 	t := template.Must(template.ParseFiles("templates/admin_login.html"))
-// 	t.Execute(w, map[string]interface{}{
-// 		"Cities":    cities,
-// 		"Hospitals": hospitals,
-// 	})
-// }
-
 func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("templates/admin_login.html"))
 	t.Execute(w, nil)
@@ -45,7 +16,7 @@ func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
 
 // AdminPage displays all appointment slots for the logged-in admin's hospital
 func AdminPage(w http.ResponseWriter, r *http.Request) {
-	_, _, hospID, ok := middleware.GetSessionCookie(r)
+	_, userID, hospID, ok := middleware.GetSessionCookie(r)
 	if !ok {
 		http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
 		return
@@ -53,6 +24,13 @@ func AdminPage(w http.ResponseWriter, r *http.Request) {
 
 	db, _ := repository.OpenDB()
 	defer db.Close()
+
+	var adminName, hospitalName string
+	db.QueryRow(`
+        SELECT u.full_name, h.name 
+        FROM users u 
+        JOIN hospital h ON u.hospital_id = h.id 
+        WHERE u.id = ?`, userID).Scan(&adminName, &hospitalName)
 
 	var slots []entity.Timeslot
 	rows, _ := db.Query(`
@@ -83,10 +61,12 @@ func AdminPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t := template.Must(template.ParseFiles("templates/admin.html"))
-	t.Execute(w, map[string]interface{}{
-		"Timeslots":   slots,
-		"Departments": depts,
-	})
+    t.Execute(w, map[string]interface{}{
+        "AdminName":    adminName,
+        "HospitalName": hospitalName,
+        "Timeslots":    slots,
+        "Departments":  depts,
+    })
 }
 
 // AddSlot handles the creation of new timeslots

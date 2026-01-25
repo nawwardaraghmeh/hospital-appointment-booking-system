@@ -9,33 +9,38 @@ import (
 )
 
 // AdminLoginPage loads cities and hospitals for dynamic login dropdowns
+// func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
+// 	db, _ := repository.OpenDB()
+// 	defer db.Close()
+
+// 	var cities []entity.City
+// 	rows, _ := db.Query("SELECT id, name FROM city")
+// 	defer rows.Close()
+// 	for rows.Next() {
+// 		var c entity.City
+// 		rows.Scan(&c.ID, &c.Name)
+// 		cities = append(cities, c)
+// 	}
+
+// 	var hospitals []entity.Hospital
+// 	hrows, _ := db.Query("SELECT id, name, city_id FROM hospital")
+// 	defer hrows.Close()
+// 	for hrows.Next() {
+// 		var h entity.Hospital
+// 		hrows.Scan(&h.ID, &h.Name, &h.CityID)
+// 		hospitals = append(hospitals, h)
+// 	}
+
+// 	t := template.Must(template.ParseFiles("templates/admin_login.html"))
+// 	t.Execute(w, map[string]interface{}{
+// 		"Cities":    cities,
+// 		"Hospitals": hospitals,
+// 	})
+// }
+
 func AdminLoginPage(w http.ResponseWriter, r *http.Request) {
-	db, _ := repository.OpenDB()
-	defer db.Close()
-
-	var cities []entity.City
-	rows, _ := db.Query("SELECT id, name FROM city")
-	defer rows.Close()
-	for rows.Next() {
-		var c entity.City
-		rows.Scan(&c.ID, &c.Name)
-		cities = append(cities, c)
-	}
-
-	var hospitals []entity.Hospital
-	hrows, _ := db.Query("SELECT id, name, city_id FROM hospital")
-	defer hrows.Close()
-	for hrows.Next() {
-		var h entity.Hospital
-		hrows.Scan(&h.ID, &h.Name, &h.CityID)
-		hospitals = append(hospitals, h)
-	}
-
 	t := template.Must(template.ParseFiles("templates/admin_login.html"))
-	t.Execute(w, map[string]interface{}{
-		"Cities":    cities,
-		"Hospitals": hospitals,
-	})
+	t.Execute(w, nil)
 }
 
 // AdminPage displays all appointment slots for the logged-in admin's hospital

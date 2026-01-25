@@ -5,19 +5,6 @@ import (
 	"strings"
 )
 
-// SetSessionCookie creates a cookie to track user state
-func SetSessionCookie(w http.ResponseWriter, userType string, id string) {
-	cookie := http.Cookie{
-		Name:     "abs_session",
-		Value:    userType + ":" + id,
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   3600,
-		SameSite: http.SameSiteLaxMode,
-	}
-	http.SetCookie(w, &cookie)
-}
-
 // ClearSessionCookie logs the user out by instructing the browser to delete the cookie
 func ClearSessionCookie(w http.ResponseWriter) {
 	cookie := http.Cookie{

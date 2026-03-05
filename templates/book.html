@@ -1,52 +1,21 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Book Appointment</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 30px;
-        background: #eef2f7;
-      }
-      form {
-        max-width: 400px;
-        margin: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      input,
-      textarea,
-      button {
-        padding: 8px;
-        font-size: 14px;
-      }
-      button {
-        cursor: pointer;
-        background: #4caf50;
-        color: white;
-        border: none;
-      }
-      p {
-        color: green;
-        font-weight: bold;
-      }
-    </style>
-  </head>
-  <body>
+{{define "content"}}
+<div class="card center-card">
     <h2>Book Appointment</h2>
-    {{if .Success}}
-    <p>Appointment booked successfully!</p>
+
+    {{if .Errors}}
+    <div class="alert alert-error">
+        {{range .Errors}}<p>• {{.}}</p>{{end}}
+    </div>
     {{end}}
-    <form method="POST">
-      <input name="name" placeholder="Name" required />
-      <input name="age" placeholder="Age" required />
-      <input name="phone" placeholder="Phone" />
-      <input name="email" placeholder="Email" />
-      <textarea name="symptoms" placeholder="Symptoms"></textarea>
-      <button type="submit">Book</button>
+
+    <form method="POST" class="form-stack">
+        <input class="input" name="name" placeholder="Full Name" value="{{.Name}}" required>
+        <input class="input" name="age" type="number" placeholder="Age" value="{{.Age}}" required>
+        <input class="input" name="phone" placeholder="Phone" value="{{.Phone}}">
+        <input class="input" name="email" type="email" placeholder="Email" value="{{.Email}}">
+        <textarea class="input" name="symptoms" placeholder="Describe your symptoms" rows="4">{{.Symptoms}}</textarea>
+        <button class="btn btn-primary btn-full" type="submit">Confirm Booking</button>
     </form>
-    <a href="/logout"><button>Logout</button></a>
-  </body>
-</html>
+    <a href="javascript:history.back()" class="link muted small">← Back to Slots</a>
+</div>
+{{end}}

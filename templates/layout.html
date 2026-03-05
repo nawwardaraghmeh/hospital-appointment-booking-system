@@ -1,0 +1,24 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HABS – Hospital Appointment Booking</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {{block "head" .}}{{end}}
+</head>
+<body>
+    <nav class="navbar">
+        <span class="navbar-brand">Hospital Appointment Booking System</span>
+    </nav>
+    <main class="main-content">
+        {{block "content" .}}{{end}}
+    </main>
+    <footer class="footer">
+        <p>Hospital Appointment Booking Service © 2026</p>
+    </footer>
+    {{block "scripts" .}}{{end}}
+</body>
+</html>
+{{end}}

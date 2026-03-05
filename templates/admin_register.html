@@ -1,0 +1,24 @@
+{{define "content"}}
+<div class="card center-card">
+    <h2>Admin Registration</h2>
+
+    {{if .Errors}}
+    <div class="alert alert-error">
+        {{range .Errors}}<p>• {{.}}</p>{{end}}
+    </div>
+    {{end}}
+
+    <form action="/do-admin-register" method="POST">
+        <input class="input" name="username" placeholder="Username (Email)" required>
+        <input class="input" name="password" type="password" placeholder="Password (min 6 chars)" required>
+        <input class="input" name="full_name" placeholder="Full Name" required>
+        <select class="input" name="hospital_id" required>
+            <option value="">Select Your Hospital</option>
+            {{range .Hospitals}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+        </select>
+        <input class="input" name="admin_code" type="password" placeholder="Admin Registration Code" required>
+        <button class="btn btn-dark btn-full" type="submit">Register as Admin</button>
+    </form>
+    <p><a href="/login" class="link muted small">Back to Login</a></p>
+</div>
+{{end}}

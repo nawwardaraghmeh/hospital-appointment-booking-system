@@ -1,0 +1,52 @@
+{{define "content"}}
+<div class="card center-card">
+    <h2>Welcome to HABS</h2>
+    <p class="muted small" style="margin-bottom: 16px;">
+        Enter your credentials. You will be redirected based on your account role.
+    </p>
+
+    <form action="/do-login" method="POST">
+        <input class="input" name="username" placeholder="Username (Email)" required>
+        <input class="input" name="password" type="password" placeholder="Password" required>
+
+        <hr class="divider">
+        <p class="muted small">Patient? Select your department to see available slots:</p>
+
+        <select class="input" id="citySelect">
+            <option value="">Select City</option>
+            {{range .Cities}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+        </select>
+        <select class="input" id="hospitalSelect">
+            <option value="">Select Hospital</option>
+            {{range .Hospitals}}<option value="{{.ID}}" data-city="{{.CityID}}">{{.Name}}</option>{{end}}
+        </select>
+        <select class="input" id="departmentSelect" name="department_id">
+            <option value="">Select Department</option>
+            {{range .Departments}}<option value="{{.ID}}" data-hospital="{{.HospitalID}}">{{.Name}}</option>{{end}}
+        </select>
+
+        <button class="btn btn-primary btn-full" type="submit">Login</button>
+    </form>
+    <p><a href="/register" class="link-bold">Create an Account</a></p>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+    document.getElementById("citySelect").addEventListener("change", function () {
+        const city = this.value;
+        document.querySelectorAll("#hospitalSelect option").forEach(opt => {
+            opt.style.display = (opt.dataset.city === city || opt.value === "") ? "" : "none";
+        });
+        document.getElementById("hospitalSelect").value = "";
+        document.getElementById("departmentSelect").value = "";
+    });
+    document.getElementById("hospitalSelect").addEventListener("change", function () {
+        const hosp = this.value;
+        document.querySelectorAll("#departmentSelect option").forEach(opt => {
+            opt.style.display = (opt.dataset.hospital === hosp || opt.value === "") ? "" : "none";
+        });
+        document.getElementById("departmentSelect").value = "";
+    });
+</script>
+{{end}}

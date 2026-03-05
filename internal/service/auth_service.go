@@ -2,14 +2,13 @@ package service
 
 import "golang.org/x/crypto/bcrypt"
 
-// HashPassword converts a plain text password into a secure hash
+// HashPassword converts a plain-text password into a bcrypt hash
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
 
-// CheckPasswordHash compares a logged-in password with the hash in the DB
+// CheckPasswordHash returns true if the plain-text password matches the hash
 func CheckPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }

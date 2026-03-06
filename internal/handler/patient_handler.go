@@ -5,56 +5,47 @@ import (
 	"abs/internal/middleware"
 	"abs/internal/repository"
 	"abs/internal/service"
-	"html/template"
+	"abs/internal/validation"
 	"net/http"
 	"strconv"
 )
 
-// PatientLoginPage loads all data for the dynamic population of dropdown menus
-func PatientLoginPage(w http.ResponseWriter, r *http.Request) {
-	db, _ := repository.OpenDB()
-	defer db.Close()
-
-	var cities []entity.City
-	rows, _ := db.Query("SELECT id, name FROM city")
-	defer rows.Close()
-	for rows.Next() {
-		var c entity.City
-		rows.Scan(&c.ID, &c.Name)
-		cities = append(cities, c)
-	}
-
-	var hospitals []entity.Hospital
-	hrows, _ := db.Query("SELECT id, name, city_id FROM hospital")
-	defer hrows.Close()
-	for hrows.Next() {
-		var h entity.Hospital
-		hrows.Scan(&h.ID, &h.Name, &h.CityID)
-		hospitals = append(hospitals, h)
-	}
-
-	var departments []entity.Department
-	drows, _ := db.Query("SELECT id, name, hospital_id FROM department")
-	defer drows.Close()
-	for drows.Next() {
-		var d entity.Department
-		drows.Scan(&d.ID, &d.Name, &d.HospitalID)
-		departments = append(departments, d)
-	}
-
-	t := template.Must(template.ParseFiles("templates/patient_login.html"))
-	t.Execute(w, map[string]interface{}{
-		"Cities":      cities,
-		"Hospitals":   hospitals,
-		"Departments": departments,
-	})
+// PatientHandler handles all patient operations
+type PatientHandler struct {
+	userRepo     repository.UserRepository
+	locationRepo repository.LocationRepository
+	slotRepo     repository.TimeslotRepository
+	bookingSvc   service.BookingService
+	tmpl         TemplateRenderer
 }
 
-// PatientSlotsPage shows 1. available slots, and 2. the patient's existing bookings.
-func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
+// NewPatientHandler constructs a PatientHandler with all required dependencies injected
+func NewPatientHandler(
+	userRepo repository.UserRepository,
+	locationRepo repository.LocationRepository,
+	slotRepo repository.TimeslotRepository,
+	bookingSvc service.BookingService,
+	tmpl TemplateRenderer,
+) *PatientHandler {
+	return &PatientHandler{
+		userRepo:     userRepo,
+		locationRepo: locationRepo,
+		slotRepo:     slotRepo,
+		bookingSvc:   bookingSvc,
+		tmpl:         tmpl,
+	}
+}
+
+// SlotsPage shows available slots for a department and the patient's existing bookings
+func (h *PatientHandler) SlotsPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+
 	deptID := r.URL.Query().Get("department_id")
 	if deptID == "" {
-		http.Error(w, "No department selected", 400)
+		h.tmpl.RenderError(w, "No department selected.", http.StatusBadRequest)
 		return
 	}
 
@@ -64,71 +55,43 @@ func PatientSlotsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := repository.OpenDB()
+	patient, err := h.userRepo.FindByID(patientID)
 	if err != nil {
-		http.Error(w, "Database connection error", 500)
+		h.tmpl.RenderError(w, "Could not load patient info.", http.StatusInternalServerError)
 		return
 	}
-	defer db.Close()
 
-	var patientName, deptName, hospName string
-	db.QueryRow("SELECT full_name FROM users WHERE id = ?", patientID).Scan(&patientName)
-	db.QueryRow(`
-        SELECT d.name, h.name 
-        FROM department d 
-        JOIN hospital h ON d.hospital_id = h.id 
-        WHERE d.id = ?`, deptID).Scan(&deptName, &hospName)
-
-	// 1. fetch unbooked slots for the chosen department
-	var slots []entity.Timeslot
-	rows, _ := db.Query(`
-        SELECT id, doctor, room, start_time, duration
-        FROM timeslot
-        WHERE department_id=? AND is_booked=0
-    `, deptID)
-	defer rows.Close()
-
-	for rows.Next() {
-		var s entity.Timeslot
-		rows.Scan(&s.ID, &s.Doctor, &s.Room, &s.StartTime, &s.Duration)
-		slots = append(slots, s)
+	deptName, hospName, err := h.locationRepo.FindDepartmentWithHospital(deptID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load department info.", http.StatusInternalServerError)
+		return
 	}
 
-	// 2. fetch the appointments the logged-in patient booked
-	var myAppointments []entity.BookingView
-	appRows, _ := db.Query(`
-		SELECT t.doctor, t.start_time, t.room, a.symptoms, d.name
-		FROM appointment a
-		JOIN timeslot t ON a.timeslot_id = t.id
-		JOIN department d ON t.department_id = d.id
-		WHERE a.patient_id = ?`, patientID)
-	defer appRows.Close()
-
-	for appRows.Next() {
-		var bv entity.BookingView
-		err := appRows.Scan(&bv.Doctor, &bv.StartTime, &bv.Room, &bv.Symptoms, &bv.DepartmentName)
-		if err != nil {
-			continue
-		}
-		myAppointments = append(myAppointments, bv)
+	slots, err := h.slotRepo.FindAvailableByDepartment(deptID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load available slots.", http.StatusInternalServerError)
+		return
 	}
 
-	bookedSuccess := r.URL.Query().Get("booked") == "true"
+	myAppointments, err := h.bookingSvc.MyAppointments(patientID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load your appointments.", http.StatusInternalServerError)
+		return
+	}
 
-	t := template.Must(template.ParseFiles("templates/patient_slots.html"))
-	t.Execute(w, map[string]interface{}{
-		"PatientName":    patientName,
+	h.tmpl.Render(w, "patient_slots.html", map[string]interface{}{
+		"PatientName":    patient.FullName,
 		"HospitalName":   hospName,
 		"DepartmentName": deptName,
 		"Slots":          slots,
 		"MyAppointments": myAppointments,
 		"DepartmentID":   deptID,
-		"BookedSuccess":  bookedSuccess,
+		"BookedSuccess":  r.URL.Query().Get("booked") == "true",
 	})
 }
 
-// BookAppointment processes the booking form and updates the slot status
-func BookAppointment(w http.ResponseWriter, r *http.Request) {
+// BookPage renders the booking form and processes the submission
+func (h *PatientHandler) BookPage(w http.ResponseWriter, r *http.Request) {
 	slotIDStr := r.URL.Query().Get("slot_id")
 	slotID, _ := strconv.Atoi(slotIDStr)
 
@@ -138,34 +101,59 @@ func BookAppointment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, _ := repository.OpenDB()
-	defer db.Close()
-
-	if r.Method == http.MethodPost {
-		age, _ := strconv.Atoi(r.FormValue("age"))
-
-		appt := entity.Appointment{
-			TimeSlotID:  slotID,
-			PatientID:   userID,
-			PatientName: r.FormValue("name"),
-			Age:         age,
-			Phone:       r.FormValue("phone"),
-			Email:       r.FormValue("email"),
-			Symptoms:    r.FormValue("symptoms"),
-		}
-
-		err := service.Reserve(db, appt)
-		if err != nil {
-			http.Error(w, "Booking failed", 500)
-			return
-		}
-
-		var deptID string
-		db.QueryRow("SELECT department_id FROM timeslot WHERE id = ?", slotID).Scan(&deptID)
-		http.Redirect(w, r, "/patient/slots?department_id="+deptID+"&booked=true", http.StatusSeeOther)
+	if r.Method == http.MethodGet {
+		h.tmpl.Render(w, "book.html", map[string]interface{}{"SlotID": slotID})
 		return
 	}
 
-	t := template.Must(template.ParseFiles("templates/book.html"))
-	t.Execute(w, map[string]interface{}{"SlotID": slotID})
+	if r.Method != http.MethodPost {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+
+	input := &validation.BookingInput{
+		Name:     r.FormValue("name"),
+		AgeStr:   r.FormValue("age"),
+		Phone:    r.FormValue("phone"),
+		Email:    r.FormValue("email"),
+		Symptoms: r.FormValue("symptoms"),
+		SlotID:   slotID,
+	}
+
+	_, ve := input.Validate()
+	if ve.HasErrors() {
+		h.tmpl.Render(w, "book.html", map[string]interface{}{
+			"SlotID":   slotID,
+			"Errors":   ve.Messages,
+			"Name":     input.Name,
+			"Age":      input.AgeStr,
+			"Phone":    input.Phone,
+			"Email":    input.Email,
+			"Symptoms": input.Symptoms,
+		})
+		return
+	}
+
+	age, _ := strconv.Atoi(input.AgeStr)
+	appt := entity.Appointment{
+		TimeSlotID:  slotID,
+		PatientID:   userID,
+		PatientName: input.Name,
+		Age:         age,
+		Phone:       input.Phone,
+		Email:       input.Email,
+		Symptoms:    input.Symptoms,
+	}
+
+	if err := h.bookingSvc.Reserve(appt); err != nil {
+		h.tmpl.RenderError(w, "Booking failed — this slot may already be taken.", http.StatusConflict)
+		return
+	}
+
+	deptID, err := h.slotRepo.FindDepartmentIDBySlotID(slotID)
+	if err != nil {
+		http.Redirect(w, r, "/patient/slots", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/patient/slots?department_id="+deptID+"&booked=true", http.StatusSeeOther)
 }

@@ -3,125 +3,227 @@ package handler
 import (
 	"abs/internal/repository"
 	"abs/internal/service"
-	"html/template"
+	"abs/internal/validation"
 	"net/http"
 	"strconv"
 )
 
-// in a real system, this would be in an environment variable
-const AdminSecret = "HOSPITAL2026"
+// AuthHandler handles registration and login for all user roles
+type AuthHandler struct {
+	userRepo        repository.UserRepository
+	locationRepo    repository.LocationRepository
+	adminCode       string
+	sessionDuration int
+	tmpl            TemplateRenderer
+}
 
-func RegisterAction(w http.ResponseWriter, r *http.Request) {
+func NewAuthHandler(
+	userRepo repository.UserRepository,
+	locationRepo repository.LocationRepository,
+	adminCode string,
+	sessionDuration int,
+	tmpl TemplateRenderer,
+) *AuthHandler {
+	return &AuthHandler{
+		userRepo:        userRepo,
+		locationRepo:    locationRepo,
+		adminCode:       adminCode,
+		sessionDuration: sessionDuration,
+		tmpl:            tmpl,
+	}
+}
+
+// public home
+
+func (h *AuthHandler) HomePage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+	h.tmpl.Render(w, "index.html", nil)
+}
+
+// patient registration
+
+// RegisterPage renders the patient-only public registration form
+func (h *AuthHandler) RegisterPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+	h.tmpl.Render(w, "register.html", nil)
+}
+
+// RegisterAction creates a patient account. role is hardcoded to "patient" here; it is never read from the request
+func (h *AuthHandler) RegisterAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
 		return
 	}
 
-	username := r.FormValue("username")
-	password := r.FormValue("password")
-	fullName := r.FormValue("full_name")
-	role := r.FormValue("role")
-
-	if role == "admin" {
-		secret := r.FormValue("admin_code")
-		if secret != AdminSecret {
-			http.Error(w, "Invalid Admin Registration Code", http.StatusUnauthorized)
-			return
-		}
+	input := &validation.PatientRegisterInput{
+		Username: r.FormValue("username"),
+		Password: r.FormValue("password"),
+		FullName: r.FormValue("full_name"),
 	}
 
-	// 1. hash the password
-	hash, err := service.HashPassword(password)
-	if err != nil {
-		http.Error(w, "Error processing password", 500)
+	if ve := input.Validate(); ve.HasErrors() {
+		h.tmpl.Render(w, "register.html", map[string]interface{}{
+			"Errors": ve.Messages,
+		})
 		return
 	}
 
-	// 2. open DB and Save
-	db, _ := repository.OpenDB()
-	defer db.Close()
-
-	var hospitalID interface{}
-	if role == "admin" {
-		hospitalID, _ = strconv.Atoi(r.FormValue("hospital_id"))
+	hash, err := service.HashPassword(input.Password)
+	if err != nil {
+		h.tmpl.RenderError(w, "Error processing password.", http.StatusInternalServerError)
+		return
 	}
 
-	err = repository.CreateUser(db, username, hash, role, fullName, hospitalID)
-	if err != nil {
-		http.Error(w, "Username already exists", http.StatusBadRequest)
+	if err := h.userRepo.Create(input.Username, hash, "patient", input.FullName, nil); err != nil {
+		h.tmpl.Render(w, "register.html", map[string]interface{}{
+			"Errors": []string{"Username already exists."},
+		})
 		return
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// RegisterPage renders the signup form
-func RegisterPage(w http.ResponseWriter, r *http.Request) {
-	db, _ := repository.OpenDB()
-	defer db.Close()
+// admin registration
 
-	rows, _ := db.Query("SELECT id, name FROM hospital")
-	var hospitals []map[string]interface{}
-	for rows.Next() {
-		var id int
-		var name string
-		rows.Scan(&id, &name)
-		hospitals = append(hospitals, map[string]interface{}{
-			"ID":   id,
-			"Name": name,
-		})
+// AdminRegisterPage renders the admin registration form
+func (h *AuthHandler) AdminRegisterPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
 	}
-
-	tmpl, _ := template.ParseFiles("templates/register.html")
-	tmpl.Execute(w, map[string]interface{}{
+	hospitals, err := h.locationRepo.AllHospitals()
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load hospitals.", http.StatusInternalServerError)
+		return
+	}
+	h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
 		"Hospitals": hospitals,
 	})
 }
 
-// LoginAction checks if user exists then redirects
-func LoginAction(w http.ResponseWriter, r *http.Request) {
-	username := r.FormValue("username")
-	password := r.FormValue("password")
+// AdminRegisterAction creates an admin account. Role is hardcoded to "admin" here; it is never read from the request
+func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
 
-	db, _ := repository.OpenDB()
-	defer db.Close()
+	input := &validation.AdminRegisterInput{
+		Username:   r.FormValue("username"),
+		Password:   r.FormValue("password"),
+		FullName:   r.FormValue("full_name"),
+		AdminCode:  r.FormValue("admin_code"),
+		HospitalID: r.FormValue("hospital_id"),
+	}
 
-	// 1. find the user in our new 'users' table
-	var id int
-	var hash, role string
-	var hospID int
-	err := db.QueryRow("SELECT id, password_hash, role, IFNULL(hospital_id, 0) FROM users WHERE username = ?",
-		username).Scan(&id, &hash, &role, &hospID)
+	if ve := input.Validate(h.adminCode); ve.HasErrors() {
+		hospitals, _ := h.locationRepo.AllHospitals()
+		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
+			"Errors":    ve.Messages,
+			"Hospitals": hospitals,
+		})
+		return
+	}
 
+	hash, err := service.HashPassword(input.Password)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusUnauthorized)
+		h.tmpl.RenderError(w, "Error processing password.", http.StatusInternalServerError)
 		return
 	}
 
-	// 2. use the Service to verify the hashed password
-	if !service.CheckPasswordHash(password, hash) {
-		http.Error(w, "Invalid password", http.StatusUnauthorized)
+	hospitalID, _ := strconv.Atoi(input.HospitalID)
+
+	if err := h.userRepo.Create(input.Username, hash, "admin", input.FullName, hospitalID); err != nil {
+		hospitals, _ := h.locationRepo.AllHospitals()
+		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
+			"Errors":    []string{"Username already exists."},
+			"Hospitals": hospitals,
+		})
 		return
 	}
 
-	// 3. set the session. it stores role, userID, and hospitalID in the cookie
-	cookieValue := role + ":" + strconv.Itoa(id) + ":" + strconv.Itoa(hospID)
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
+// one login
+
+// LoginPage renders the single login form for all users
+func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+	cities, err := h.locationRepo.AllCities()
+	hospitals, err2 := h.locationRepo.AllHospitals()
+	departments, err3 := h.locationRepo.AllDepartments()
+	if err != nil || err2 != nil || err3 != nil {
+		h.tmpl.RenderError(w, "Could not load location data.", http.StatusInternalServerError)
+		return
+	}
+	h.tmpl.Render(w, "login.html", map[string]interface{}{
+		"Cities":      cities,
+		"Hospitals":   hospitals,
+		"Departments": departments,
+	})
+}
+
+// LoginAction authenticates the user and redirects based on the role resolved from the database
+func (h *AuthHandler) LoginAction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, err := h.userRepo.FindByUsername(r.FormValue("username"))
+	if err != nil {
+		h.tmpl.RenderError(w, "Invalid username or password.", http.StatusUnauthorized)
+		return
+	}
+
+	if !service.CheckPasswordHash(r.FormValue("password"), user.PasswordHash) {
+		h.tmpl.RenderError(w, "Invalid username or password.", http.StatusUnauthorized)
+		return
+	}
+
+	cookieValue := user.Role + ":" + strconv.Itoa(user.ID) + ":" + strconv.Itoa(user.HospitalID)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "abs_session",
 		Value:    cookieValue,
 		Path:     "/",
 		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   h.sessionDuration,
 	})
 
-	// 4. redirect based on role
-	if role == "admin" {
+	if user.Role == "admin" {
 		http.Redirect(w, r, "/admin", http.StatusSeeOther)
-	} else {
-		deptID := r.FormValue("department_id")
-		if deptID != "" {
-			http.Redirect(w, r, "/patient/slots?department_id="+deptID, http.StatusSeeOther)
-		} else {
-			http.Redirect(w, r, "/patient/slots", http.StatusSeeOther)
-		}
+		return
 	}
+
+	if deptID := r.FormValue("department_id"); deptID != "" {
+		http.Redirect(w, r, "/patient/slots?department_id="+deptID, http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/patient/slots", http.StatusSeeOther)
+	}
+}
+
+// logout
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "abs_session",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

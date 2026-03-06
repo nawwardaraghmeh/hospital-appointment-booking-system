@@ -1,0 +1,22 @@
+# Environment variables — contains secrets, never commit this
+.env
+
+# SQLite database — runtime data, not source code
+data/abs.db
+data/
+
+# Go build output
+habs
+/habs
+
+# Go test cache
+*.test
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store

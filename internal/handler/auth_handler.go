@@ -1,150 +1,71 @@
 package handler
 
 import (
+	"abs/internal/bookingclient"
+	"abs/internal/entity"
+	"abs/internal/middleware"
 	"abs/internal/repository"
 	"abs/internal/service"
-	"abs/internal/validation"
 	"net/http"
 	"strconv"
 )
 
-// AuthHandler handles registration and login for all user roles
+// AuthHandler handles all UI-facing routes: registration, login, logout, and all patient/admin pages
 type AuthHandler struct {
 	userRepo        repository.UserRepository
-	locationRepo    repository.LocationRepository
+	bookingClient   *bookingclient.Client
 	adminCode       string
 	sessionDuration int
 	tmpl            TemplateRenderer
 }
 
+// NewAuthHandler constructs an AuthHandler with all required dependencies
 func NewAuthHandler(
 	userRepo repository.UserRepository,
-	locationRepo repository.LocationRepository,
+	bookingClient *bookingclient.Client,
 	adminCode string,
 	sessionDuration int,
 	tmpl TemplateRenderer,
 ) *AuthHandler {
 	return &AuthHandler{
 		userRepo:        userRepo,
-		locationRepo:    locationRepo,
+		bookingClient:   bookingClient,
 		adminCode:       adminCode,
 		sessionDuration: sessionDuration,
 		tmpl:            tmpl,
 	}
 }
 
-// public home
-
+// HomePage serves the main landing page
 func (h *AuthHandler) HomePage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
-		return
-	}
 	h.tmpl.Render(w, "index.html", nil)
 }
 
-// patient registration
-
-// RegisterPage renders the patient-only public registration form
+// RegisterPage renders the patient registration form
 func (h *AuthHandler) RegisterPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	h.tmpl.Render(w, "register.html", nil)
 }
 
-// RegisterAction creates a patient account. role is hardcoded to "patient" here; it is never read from the request
+// RegisterAction processes patient registration
 func (h *AuthHandler) RegisterAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	input := &validation.PatientRegisterInput{
-		Username: r.FormValue("username"),
-		Password: r.FormValue("password"),
-		FullName: r.FormValue("full_name"),
+	hash, err := service.HashPassword(r.FormValue("password"))
+	if err != nil {
+		h.tmpl.RenderError(w, "Error processing password", http.StatusInternalServerError)
+		return
 	}
 
-	if ve := input.Validate(); ve.HasErrors() {
+	if err := h.userRepo.Create(r.FormValue("username"), hash, "patient", r.FormValue("full_name"), nil); err != nil {
 		h.tmpl.Render(w, "register.html", map[string]interface{}{
-			"Errors": ve.Messages,
-		})
-		return
-	}
-
-	hash, err := service.HashPassword(input.Password)
-	if err != nil {
-		h.tmpl.RenderError(w, "Error processing password.", http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.userRepo.Create(input.Username, hash, "patient", input.FullName, nil); err != nil {
-		h.tmpl.Render(w, "register.html", map[string]interface{}{
-			"Errors": []string{"Username already exists."},
-		})
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-// admin registration
-
-// AdminRegisterPage renders the admin registration form
-func (h *AuthHandler) AdminRegisterPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
-		return
-	}
-	hospitals, err := h.locationRepo.AllHospitals()
-	if err != nil {
-		h.tmpl.RenderError(w, "Could not load hospitals.", http.StatusInternalServerError)
-		return
-	}
-	h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
-		"Hospitals": hospitals,
-	})
-}
-
-// AdminRegisterAction creates an admin account. Role is hardcoded to "admin" here; it is never read from the request
-func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
-		return
-	}
-
-	input := &validation.AdminRegisterInput{
-		Username:   r.FormValue("username"),
-		Password:   r.FormValue("password"),
-		FullName:   r.FormValue("full_name"),
-		AdminCode:  r.FormValue("admin_code"),
-		HospitalID: r.FormValue("hospital_id"),
-	}
-
-	if ve := input.Validate(h.adminCode); ve.HasErrors() {
-		hospitals, _ := h.locationRepo.AllHospitals()
-		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
-			"Errors":    ve.Messages,
-			"Hospitals": hospitals,
-		})
-		return
-	}
-
-	hash, err := service.HashPassword(input.Password)
-	if err != nil {
-		h.tmpl.RenderError(w, "Error processing password.", http.StatusInternalServerError)
-		return
-	}
-
-	hospitalID, _ := strconv.Atoi(input.HospitalID)
-
-	if err := h.userRepo.Create(input.Username, hash, "admin", input.FullName, hospitalID); err != nil {
-		hospitals, _ := h.locationRepo.AllHospitals()
-		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
-			"Errors":    []string{"Username already exists."},
-			"Hospitals": hospitals,
+			"Errors": []string{"Username already exists"},
 		})
 		return
 	}
@@ -152,21 +73,81 @@ func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// one login
+// AdminRegisterPage renders the hidden admin registration form
+func (h *AuthHandler) AdminRegisterPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-// LoginPage renders the single login form for all users
+	hospitals, err := h.bookingClient.AllHospitals()
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load hospitals from Booking Service", http.StatusBadGateway)
+		return
+	}
+	h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
+		"Hospitals": hospitals,
+	})
+}
+
+// AdminRegisterAction processes admin registration
+func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if r.FormValue("admin_code") != h.adminCode {
+		hospitals, _ := h.bookingClient.AllHospitals()
+		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
+			"Hospitals": hospitals,
+			"Errors":    []string{"Invalid admin registration code"},
+		})
+		return
+	}
+
+	hash, err := service.HashPassword(r.FormValue("password"))
+	if err != nil {
+		h.tmpl.RenderError(w, "Error processing password", http.StatusInternalServerError)
+		return
+	}
+
+	hospitalID, _ := strconv.Atoi(r.FormValue("hospital_id"))
+	if err := h.userRepo.Create(r.FormValue("username"), hash, "admin", r.FormValue("full_name"), hospitalID); err != nil {
+		hospitals, _ := h.bookingClient.AllHospitals()
+		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
+			"Hospitals": hospitals,
+			"Errors":    []string{"Username already exists"},
+		})
+		return
+	}
+
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
+// LoginPage renders the unified login form
 func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	cities, err := h.locationRepo.AllCities()
-	hospitals, err2 := h.locationRepo.AllHospitals()
-	departments, err3 := h.locationRepo.AllDepartments()
-	if err != nil || err2 != nil || err3 != nil {
-		h.tmpl.RenderError(w, "Could not load location data.", http.StatusInternalServerError)
+
+	cities, err := h.bookingClient.AllCities()
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load cities from Booking Service", http.StatusBadGateway)
 		return
 	}
+	hospitals, err := h.bookingClient.AllHospitals()
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load hospitals from Booking Service", http.StatusBadGateway)
+		return
+	}
+	departments, err := h.bookingClient.AllDepartments()
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load departments from Booking Service", http.StatusBadGateway)
+		return
+	}
+
 	h.tmpl.Render(w, "login.html", map[string]interface{}{
 		"Cities":      cities,
 		"Hospitals":   hospitals,
@@ -174,24 +155,25 @@ func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// LoginAction authenticates the user and redirects based on the role resolved from the database
+// LoginAction authenticates the user and sets the session cookie
 func (h *AuthHandler) LoginAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.tmpl.RenderError(w, "Method not allowed.", http.StatusMethodNotAllowed)
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	user, err := h.userRepo.FindByUsername(r.FormValue("username"))
 	if err != nil {
-		h.tmpl.RenderError(w, "Invalid username or password.", http.StatusUnauthorized)
+		h.tmpl.Render(w, "login.html", map[string]interface{}{"Error": "Invalid username or password"})
 		return
 	}
 
 	if !service.CheckPasswordHash(r.FormValue("password"), user.PasswordHash) {
-		h.tmpl.RenderError(w, "Invalid username or password.", http.StatusUnauthorized)
+		h.tmpl.Render(w, "login.html", map[string]interface{}{"Error": "Invalid username or password"})
 		return
 	}
 
+	// role read from DB
 	cookieValue := user.Role + ":" + strconv.Itoa(user.ID) + ":" + strconv.Itoa(user.HospitalID)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "abs_session",
@@ -214,8 +196,7 @@ func (h *AuthHandler) LoginAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// logout
-
+// Logout destroys the session cookie
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "abs_session",
@@ -226,4 +207,176 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// AdminDashboard renders the admin panel
+func (h *AuthHandler) AdminDashboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	_, userID, hospID, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	adminName, hospitalName, err := h.bookingClient.FindHospitalNameByUserID(userID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load admin info from Booking Service", http.StatusBadGateway)
+		return
+	}
+
+	slots, err := h.bookingClient.FindAllByHospital(hospID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load timeslots from Booking Service", http.StatusBadGateway)
+		return
+	}
+
+	depts, err := h.bookingClient.DepartmentsByHospital(hospID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load departments from Booking Service", http.StatusBadGateway)
+		return
+	}
+
+	h.tmpl.Render(w, "admin.html", map[string]interface{}{
+		"AdminName":    adminName,
+		"HospitalName": hospitalName,
+		"Timeslots":    slots,
+		"Departments":  depts,
+	})
+}
+
+// AddSlot forwards a new timeslot to the Booking Service
+func (h *AuthHandler) AddSlot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	_, userID, hospID, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	duration, _ := strconv.Atoi(r.FormValue("duration"))
+	if err := h.bookingClient.CreateSlot(
+		r.FormValue("department_id"),
+		r.FormValue("doctor"),
+		r.FormValue("room"),
+		r.FormValue("start_time"),
+		duration,
+	); err != nil {
+		adminName, hospitalName, _ := h.bookingClient.FindHospitalNameByUserID(userID)
+		slots, _ := h.bookingClient.FindAllByHospital(hospID)
+		depts, _ := h.bookingClient.DepartmentsByHospital(hospID)
+		h.tmpl.Render(w, "admin.html", map[string]interface{}{
+			"AdminName":    adminName,
+			"HospitalName": hospitalName,
+			"Timeslots":    slots,
+			"Departments":  depts,
+			"Errors":       []string{"Could not create timeslot: " + err.Error()},
+		})
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
+}
+
+// SlotsPage fetches available slots from the Booking Service and renders them
+func (h *AuthHandler) SlotsPage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	deptID := r.URL.Query().Get("department_id")
+	if deptID == "" {
+		h.tmpl.RenderError(w, "No department selected", http.StatusBadRequest)
+		return
+	}
+
+	_, patientID, _, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	patient, err := h.userRepo.FindByID(strconv.Itoa(patientID))
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load patient info", http.StatusInternalServerError)
+		return
+	}
+
+	// Both calls go over HTTP to the Booking Service
+	deptName, hospName, err := h.bookingClient.FindDepartmentWithHospital(deptID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load department info from Booking Service", http.StatusBadGateway)
+		return
+	}
+
+	slots, err := h.bookingClient.FindAvailableByDepartment(deptID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load slots from Booking Service", http.StatusBadGateway)
+		return
+	}
+
+	myAppointments, err := h.bookingClient.MyAppointments(patientID)
+	if err != nil {
+		h.tmpl.RenderError(w, "Could not load appointments from Booking Service", http.StatusBadGateway)
+		return
+	}
+
+	h.tmpl.Render(w, "patient_slots.html", map[string]interface{}{
+		"PatientName":    patient.FullName,
+		"HospitalName":   hospName,
+		"DepartmentName": deptName,
+		"Slots":          slots,
+		"MyAppointments": myAppointments,
+		"DepartmentID":   deptID,
+		"BookedSuccess":  r.URL.Query().Get("booked") == "true",
+	})
+}
+
+// BookPage renders the booking form (GET) and submits the booking (POST)
+func (h *AuthHandler) BookPage(w http.ResponseWriter, r *http.Request) {
+	slotIDStr := r.URL.Query().Get("slot_id")
+	slotID, _ := strconv.Atoi(slotIDStr)
+
+	_, userID, _, ok := middleware.GetSessionCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		age, _ := strconv.Atoi(r.FormValue("age"))
+
+		appt := entity.Appointment{
+			TimeSlotID:  slotID,
+			PatientID:   strconv.Itoa(userID),
+			PatientName: r.FormValue("name"),
+			Age:         age,
+			Phone:       r.FormValue("phone"),
+			Email:       r.FormValue("email"),
+			Symptoms:    r.FormValue("symptoms"),
+		}
+
+		if err := h.bookingClient.Reserve(appt); err != nil {
+			h.tmpl.RenderError(w, "Booking failed: slot may already be taken", http.StatusConflict)
+			return
+		}
+
+		deptID, err := h.bookingClient.FindDepartmentIDBySlotID(slotID)
+		if err != nil {
+			http.Redirect(w, r, "/patient/slots", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/patient/slots?department_id="+deptID+"&booked=true", http.StatusSeeOther)
+		return
+	}
+
+	h.tmpl.Render(w, "book.html", map[string]interface{}{"SlotID": slotID})
 }

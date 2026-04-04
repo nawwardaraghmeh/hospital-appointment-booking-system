@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -17,20 +18,25 @@ func ClearSessionCookie(w http.ResponseWriter) {
 	})
 }
 
-// GetSessionCookie parses the session cookie into its three parts: role, userID, hospitalID
-func GetSessionCookie(r *http.Request) (role, id, hospID string, ok bool) {
+// GetSessionCookie parses the session cookie (format: role:userID:hospitalID)
+func GetSessionCookie(r *http.Request) (role string, userID int, hospitalID int, ok bool) {
 	c, err := r.Cookie("abs_session")
 	if err != nil {
-		return "", "", "", false
+		return "", 0, 0, false
 	}
 	parts := strings.Split(c.Value, ":")
 	if len(parts) != 3 {
-		return "", "", "", false
+		return "", 0, 0, false
 	}
-	return parts[0], parts[1], parts[2], true
+	uid, err1 := strconv.Atoi(parts[1])
+	hid, err2 := strconv.Atoi(parts[2])
+	if err1 != nil || err2 != nil {
+		return "", 0, 0, false
+	}
+	return parts[0], uid, hid, true
 }
 
-// RequireSession is a middleware that protects routes, allowing only the specified role through
+// RequireSession protects a route, allowing only the specified role through
 func RequireSession(next http.HandlerFunc, allowedRole string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		role, _, _, ok := GetSessionCookie(r)

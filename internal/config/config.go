@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
-// Config holds all configurable application values loaded from the environment
+// Config holds all configurable values loaded from the environment
 type Config struct {
-	ServerPort            string
+	AuthPort              string
+	BookingPort           string
+	BookingURL            string
 	DBPath                string
 	AdminRegistrationCode string
 	SessionDuration       int
@@ -19,11 +22,20 @@ type Config struct {
 func Load() (*Config, error) {
 	loadDotEnv(".env")
 
+	sessionDuration := 3600
+	if v := os.Getenv("SESSION_DURATION"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			sessionDuration = n
+		}
+	}
+
 	cfg := &Config{
-		ServerPort:            getEnv("SERVER_PORT", "8080"),
+		AuthPort:              getEnv("AUTH_PORT", "8080"),
+		BookingPort:           getEnv("BOOKING_PORT", "8081"),
+		BookingURL:            getEnv("BOOKING_URL", "http://localhost:8081"),
 		DBPath:                getEnv("DB_PATH", "./data/abs.db"),
 		AdminRegistrationCode: getEnv("ADMIN_REGISTRATION_CODE", ""),
-		SessionDuration:       3600,
+		SessionDuration:       sessionDuration,
 	}
 
 	if cfg.AdminRegistrationCode == "" {
@@ -33,7 +45,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// loadDotEnv parses a .env file
+// loadDotEnv parses a .env file and sets each key=value as an environment variable
 func loadDotEnv(path string) {
 	f, err := os.Open(path)
 	if err != nil {

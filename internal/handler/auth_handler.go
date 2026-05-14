@@ -6,6 +6,7 @@ import (
 	"abs/internal/middleware"
 	"abs/internal/repository"
 	"abs/internal/service"
+	"abs/internal/validation"
 	"net/http"
 	"strconv"
 )
@@ -57,15 +58,33 @@ func (h *AuthHandler) RegisterAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := service.HashPassword(r.FormValue("password"))
+	// Validate input
+	registerInput := &validation.PatientRegisterInput{
+		Username: r.FormValue("username"),
+		Password: r.FormValue("password"),
+		FullName: r.FormValue("full_name"),
+	}
+
+	if ve := registerInput.Validate(); ve.HasErrors() {
+		h.tmpl.Render(w, "register.html", map[string]interface{}{
+			"Errors":   ve.Messages,
+			"Username": registerInput.Username,
+			"FullName": registerInput.FullName,
+		})
+		return
+	}
+
+	hash, err := service.HashPassword(registerInput.Password)
 	if err != nil {
 		h.tmpl.RenderError(w, "Error processing password", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.userRepo.Create(r.FormValue("username"), hash, "patient", r.FormValue("full_name"), nil); err != nil {
+	if err := h.userRepo.Create(registerInput.Username, hash, "patient", registerInput.FullName, nil); err != nil {
 		h.tmpl.Render(w, "register.html", map[string]interface{}{
-			"Errors": []string{"Username already exists"},
+			"Errors":   []string{"Username already exists"},
+			"Username": registerInput.Username,
+			"FullName": registerInput.FullName,
 		})
 		return
 	}
@@ -97,27 +116,42 @@ func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if r.FormValue("admin_code") != h.adminCode {
+	// Validate input
+	adminInput := &validation.AdminRegisterInput{
+		Username:   r.FormValue("username"),
+		Password:   r.FormValue("password"),
+		FullName:   r.FormValue("full_name"),
+		AdminCode:  r.FormValue("admin_code"),
+		HospitalID: r.FormValue("hospital_id"),
+	}
+
+	if ve := adminInput.Validate(h.adminCode); ve.HasErrors() {
 		hospitals, _ := h.bookingClient.AllHospitals()
 		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
-			"Hospitals": hospitals,
-			"Errors":    []string{"Invalid admin registration code"},
+			"Hospitals":  hospitals,
+			"Errors":     ve.Messages,
+			"Username":   adminInput.Username,
+			"FullName":   adminInput.FullName,
+			"HospitalID": adminInput.HospitalID,
 		})
 		return
 	}
 
-	hash, err := service.HashPassword(r.FormValue("password"))
+	hash, err := service.HashPassword(adminInput.Password)
 	if err != nil {
 		h.tmpl.RenderError(w, "Error processing password", http.StatusInternalServerError)
 		return
 	}
 
-	hospitalID, _ := strconv.Atoi(r.FormValue("hospital_id"))
-	if err := h.userRepo.Create(r.FormValue("username"), hash, "admin", r.FormValue("full_name"), hospitalID); err != nil {
+	hospitalID, _ := strconv.Atoi(adminInput.HospitalID)
+	if err := h.userRepo.Create(adminInput.Username, hash, "admin", adminInput.FullName, hospitalID); err != nil {
 		hospitals, _ := h.bookingClient.AllHospitals()
 		h.tmpl.Render(w, "admin_register.html", map[string]interface{}{
-			"Hospitals": hospitals,
-			"Errors":    []string{"Username already exists"},
+			"Hospitals":  hospitals,
+			"Errors":     []string{"Username already exists"},
+			"Username":   adminInput.Username,
+			"FullName":   adminInput.FullName,
+			"HospitalID": adminInput.HospitalID,
 		})
 		return
 	}
@@ -261,12 +295,40 @@ func (h *AuthHandler) AddSlot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	duration, _ := strconv.Atoi(r.FormValue("duration"))
+	// Validate input
+	timeslotInput := &validation.TimeslotInput{
+		DepartmentID: r.FormValue("department_id"),
+		Doctor:       r.FormValue("doctor"),
+		Room:         r.FormValue("room"),
+		StartTime:    r.FormValue("start_time"),
+		DurationStr:  r.FormValue("duration"),
+	}
+
+	duration, ve := timeslotInput.Validate()
+	if ve.HasErrors() {
+		adminName, hospitalName, _ := h.bookingClient.FindHospitalNameByUserID(userID)
+		slots, _ := h.bookingClient.FindAllByHospital(hospID)
+		depts, _ := h.bookingClient.DepartmentsByHospital(hospID)
+		h.tmpl.Render(w, "admin.html", map[string]interface{}{
+			"AdminName":    adminName,
+			"HospitalName": hospitalName,
+			"Timeslots":    slots,
+			"Departments":  depts,
+			"Errors":       ve.Messages,
+			"DepartmentID": timeslotInput.DepartmentID,
+			"Doctor":       timeslotInput.Doctor,
+			"Room":         timeslotInput.Room,
+			"StartTime":    timeslotInput.StartTime,
+			"Duration":     timeslotInput.DurationStr,
+		})
+		return
+	}
+
 	if err := h.bookingClient.CreateSlot(
-		r.FormValue("department_id"),
-		r.FormValue("doctor"),
-		r.FormValue("room"),
-		r.FormValue("start_time"),
+		timeslotInput.DepartmentID,
+		timeslotInput.Doctor,
+		timeslotInput.Room,
+		timeslotInput.StartTime,
 		duration,
 	); err != nil {
 		adminName, hospitalName, _ := h.bookingClient.FindHospitalNameByUserID(userID)
@@ -278,6 +340,11 @@ func (h *AuthHandler) AddSlot(w http.ResponseWriter, r *http.Request) {
 			"Timeslots":    slots,
 			"Departments":  depts,
 			"Errors":       []string{"Could not create timeslot: " + err.Error()},
+			"DepartmentID": timeslotInput.DepartmentID,
+			"Doctor":       timeslotInput.Doctor,
+			"Room":         timeslotInput.Room,
+			"StartTime":    timeslotInput.StartTime,
+			"Duration":     timeslotInput.DurationStr,
 		})
 		return
 	}
@@ -352,20 +419,53 @@ func (h *AuthHandler) BookPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		age, _ := strconv.Atoi(r.FormValue("age"))
+		// Validate input
+		bookingInput := &validation.BookingInput{
+			Name:     r.FormValue("name"),
+			AgeStr:   r.FormValue("age"),
+			Phone:    r.FormValue("phone"),
+			Email:    r.FormValue("email"),
+			Symptoms: r.FormValue("symptoms"),
+			SlotID:   slotID,
+		}
+
+		_, ve := bookingInput.Validate()
+		if ve.HasErrors() {
+			h.tmpl.Render(w, "book.html", map[string]interface{}{
+				"SlotID":   slotID,
+				"Errors":   ve.Messages,
+				"Name":     bookingInput.Name,
+				"Age":      bookingInput.AgeStr,
+				"Phone":    bookingInput.Phone,
+				"Email":    bookingInput.Email,
+				"Symptoms": bookingInput.Symptoms,
+			})
+			return
+		}
+
+		// Convert age after validation
+		age, _ := strconv.Atoi(bookingInput.AgeStr)
 
 		appt := entity.Appointment{
 			TimeSlotID:  slotID,
 			PatientID:   strconv.Itoa(userID),
-			PatientName: r.FormValue("name"),
+			PatientName: bookingInput.Name,
 			Age:         age,
-			Phone:       r.FormValue("phone"),
-			Email:       r.FormValue("email"),
-			Symptoms:    r.FormValue("symptoms"),
+			Phone:       bookingInput.Phone,
+			Email:       bookingInput.Email,
+			Symptoms:    bookingInput.Symptoms,
 		}
 
 		if err := h.bookingClient.Reserve(appt); err != nil {
-			h.tmpl.RenderError(w, "Booking failed: slot may already be taken", http.StatusConflict)
+			h.tmpl.Render(w, "book.html", map[string]interface{}{
+				"SlotID":   slotID,
+				"Errors":   []string{"Booking failed: slot may already be taken"},
+				"Name":     bookingInput.Name,
+				"Age":      bookingInput.AgeStr,
+				"Phone":    bookingInput.Phone,
+				"Email":    bookingInput.Email,
+				"Symptoms": bookingInput.Symptoms,
+			})
 			return
 		}
 

@@ -54,7 +54,7 @@ func InitDB(db *sql.DB) error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS appointment(
 			id           INTEGER PRIMARY KEY AUTOINCREMENT,
-			timeslot_id  INTEGER,
+			timeslot_id  INTEGER UNIQUE,
 			patient_name TEXT,
 			patient_id   TEXT,
 			age          INTEGER,

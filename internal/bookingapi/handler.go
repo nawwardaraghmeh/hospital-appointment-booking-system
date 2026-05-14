@@ -99,7 +99,6 @@ func (h *Handler) departmentDetail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Path: /api/departments/{id}/hospital → parts[2] = id
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) < 4 {
 		writeError(w, "invalid path", http.StatusBadRequest)
@@ -268,9 +267,14 @@ func (h *Handler) createAppointment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.bookingSvc.Reserve(appt); err != nil {
-		writeError(w, "booking failed: slot may already be taken", http.StatusConflict)
+		if strings.Contains(err.Error(), "slot already booked") {
+			writeError(w, "booking failed: slot may already be taken", http.StatusConflict)
+			return
+		}
+		writeError(w, "booking failed", http.StatusConflict)
 		return
 	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 

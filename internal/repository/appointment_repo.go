@@ -3,6 +3,7 @@ package repository
 import (
 	"abs/internal/entity"
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
@@ -35,11 +36,26 @@ func NewAppointmentRepository(db *sql.DB) (AppointmentRepository, error) {
 	}, nil
 }
 
-// Create inserts the appointment and marks the timeslot as booked in one transaction when a patient books a slot
+// Create atomically claims the timeslot (only if not already booked) and inserts the appointment
 func (r *appointmentRepository) Create(a entity.Appointment) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	res, err := tx.Exec(`UPDATE timeslot SET is_booked=1 WHERE id=? AND is_booked=0`, a.TimeSlotID)
+	if err != nil {
+		return fmt.Errorf("claim slot: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("claim slot rows affected: %w", err)
+	}
+	if rows == 0 {
+		return errors.New("slot already booked")
 	}
 
 	_, err = tx.Exec(
@@ -48,17 +64,13 @@ func (r *appointmentRepository) Create(a entity.Appointment) error {
 		a.TimeSlotID, a.PatientID, a.PatientName, a.Age, a.Phone, a.Email, a.Symptoms,
 	)
 	if err != nil {
-		tx.Rollback()
 		return fmt.Errorf("insert appointment: %w", err)
 	}
 
-	_, err = tx.Exec(`UPDATE timeslot SET is_booked=1 WHERE id=?`, a.TimeSlotID)
-	if err != nil {
-		tx.Rollback()
-		return fmt.Errorf("mark slot booked: %w", err)
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
-
-	return tx.Commit()
+	return nil
 }
 
 // FindByPatientID returns all appointments booked by a given patient

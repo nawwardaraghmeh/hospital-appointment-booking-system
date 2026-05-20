@@ -84,7 +84,7 @@ Admin Registration:	http://localhost:8080/admin/register	Hidden route that's not
 
 Admin Dashboard:	http://localhost:8080/admin	After admin login
 
-Patient Slots:	http://localhost:8080/patient/slots	After patient login
+Patient Slots:	http://localhost:8080/patient/slots?department_id=1	After patient login
 
 
 Admin registration requires the secret code defined in .env (ADMIN_REGISTRATION_CODE). The admin registration URL is intentionally not linked from the public UI, administrators navigate to it directly.

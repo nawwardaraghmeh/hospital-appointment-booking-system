@@ -1,6 +1,6 @@
 package entity
 
-// User represents either a patient or admin in the system
+// user entity, represents either a patient or admin in the system
 type User struct {
 	ID           int
 	Username     string
@@ -10,27 +10,27 @@ type User struct {
 	HospitalID   int
 }
 
-// City entity
+// city entity
 type City struct {
 	ID   int
 	Name string
 }
 
-// Hospital entity
+// hospital entity
 type Hospital struct {
 	ID     int
 	Name   string
 	CityID int
 }
 
-// Department entity
+// department entity
 type Department struct {
 	ID         int
 	Name       string
 	HospitalID int
 }
 
-// Timeslot is an available, or already booked, appointment slot created by an admin
+// timeslot entity, created by admins, can be booked by patients
 type Timeslot struct {
 	ID           int
 	DepartmentID int
@@ -43,7 +43,7 @@ type Timeslot struct {
 	Patient      string
 }
 
-// Appointment represents that successfully booked slots
+// appointment entity, signify successfully-booked slots
 type Appointment struct {
 	ID          int
 	TimeSlotID  int
@@ -55,7 +55,7 @@ type Appointment struct {
 	Symptoms    string
 }
 
-// BookingView is used to display a patient's existing appointments
+// bookingview entity, to display a patient's existing appointments
 type BookingView struct {
 	Doctor         string
 	StartTime      string

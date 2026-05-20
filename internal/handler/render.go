@@ -8,19 +8,18 @@ import (
 	"sync"
 )
 
-// TemplateRenderer is the interface where handlers render templates through
+// the interface where handlers render templates
 type TemplateRenderer interface {
 	Render(w http.ResponseWriter, name string, data interface{})
 	RenderError(w http.ResponseWriter, message string, code int)
 }
 
-// The layout file is parsed together with each page file
 type templateRenderer struct {
 	cache map[string]*template.Template
 	mu    sync.RWMutex
 }
 
-// NewTemplateRenderer parses every template file paired with layout.html
+// parse every template file paired with layout.html
 func NewTemplateRenderer(dir string) (TemplateRenderer, error) {
 	pages := []string{
 		"index.html",
@@ -48,7 +47,7 @@ func NewTemplateRenderer(dir string) (TemplateRenderer, error) {
 	return &templateRenderer{cache: cache}, nil
 }
 
-// Render looks up the pre-parsed template by name and executes it
+// look up the pre-parsed template by name and executes it
 func (tr *templateRenderer) Render(w http.ResponseWriter, name string, data interface{}) {
 	tr.mu.RLock()
 	tmpl, ok := tr.cache[name]
@@ -65,7 +64,7 @@ func (tr *templateRenderer) Render(w http.ResponseWriter, name string, data inte
 	}
 }
 
-// RenderError renders the error.html template with a user-friendly message
+// render the error.html template with a user-friendly message
 func (tr *templateRenderer) RenderError(w http.ResponseWriter, message string, code int) {
 	tr.mu.RLock()
 	tmpl, ok := tr.cache["error.html"]

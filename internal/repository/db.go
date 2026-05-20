@@ -9,7 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// OpenDB opens an SQLite connection to the given path
+// open an SQLite connection
 func OpenDB(dbPath string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
 		return nil, fmt.Errorf("could not create db directory: %w", err)
@@ -21,7 +21,7 @@ func OpenDB(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 
-// InitDB creates all tables if they do not already exist
+// create all tables if they do not already exist
 func InitDB(db *sql.DB) error {
 	statements := []string{
 		`CREATE TABLE IF NOT EXISTS city(

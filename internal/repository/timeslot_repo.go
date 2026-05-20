@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// TimeslotRepository defines database operations for timeslots
+// define database operations for timeslots
 type TimeslotRepository interface {
 	FindAvailableByDepartment(departmentID string) ([]entity.Timeslot, error)
 	FindAllByHospital(hospitalID string) ([]entity.Timeslot, error)
@@ -22,7 +22,7 @@ type timeslotRepository struct {
 	stmtCreate          *sql.Stmt
 }
 
-// NewTimeslotRepository constructs a TimeslotRepository with all statements prepared
+// creates a TimeslotRepository with all prepared statements
 func NewTimeslotRepository(db *sql.DB) (TimeslotRepository, error) {
 	stmtAvail, err := db.Prepare(
 		`SELECT id, doctor, room, start_time, duration
@@ -65,6 +65,7 @@ func NewTimeslotRepository(db *sql.DB) (TimeslotRepository, error) {
 	}, nil
 }
 
+// return unbooked slots for a certain dept
 func (r *timeslotRepository) FindAvailableByDepartment(departmentID string) ([]entity.Timeslot, error) {
 	rows, err := r.stmtAvailableByDept.Query(departmentID)
 	if err != nil {
@@ -86,6 +87,7 @@ func (r *timeslotRepository) FindAvailableByDepartment(departmentID string) ([]e
 	return slots, nil
 }
 
+// return all slots for a certain hospital (for admin dashboard)
 func (r *timeslotRepository) FindAllByHospital(hospitalID string) ([]entity.Timeslot, error) {
 	rows, err := r.stmtAllByHospital.Query(hospitalID)
 	if err != nil {
@@ -110,6 +112,7 @@ func (r *timeslotRepository) FindAllByHospital(hospitalID string) ([]entity.Time
 	return slots, nil
 }
 
+// return the department id for a given timeslot
 func (r *timeslotRepository) FindDepartmentIDBySlotID(slotID int) (string, error) {
 	var deptID string
 	err := r.stmtDeptIDBySlot.QueryRow(slotID).Scan(&deptID)
@@ -119,6 +122,7 @@ func (r *timeslotRepository) FindDepartmentIDBySlotID(slotID int) (string, error
 	return deptID, nil
 }
 
+// create a new timeslot, done by admins
 func (r *timeslotRepository) Create(departmentID, doctor, room, startTime string, duration int) error {
 	_, err := r.stmtCreate.Exec(departmentID, doctor, room, startTime, duration)
 	if err != nil {

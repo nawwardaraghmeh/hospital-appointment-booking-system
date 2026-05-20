@@ -17,7 +17,7 @@ func main() {
 		log.Fatalf("config error: %v", err)
 	}
 
-	// open the shared SQLite database (Auth Service owns the users table)
+	// open the shared SQLite database
 	db, err := repository.OpenDB(cfg.DBPath)
 	if err != nil {
 		log.Fatalf("database error: %v", err)
@@ -31,22 +31,22 @@ func main() {
 		log.Fatalf("SeedData error: %v", err)
 	}
 
-	// build repositories that Auth Service needs (users only)
+	// build repositories needed
 	userRepo, err := repository.NewUserRepository(db)
 	if err != nil {
 		log.Fatalf("user repo error: %v", err)
 	}
 
-	// build the HTTP client that calls the Booking Service
+	// build the http client that calls the booking service
 	bookingClient := bookingclient.New(cfg.BookingURL)
 
-	// parse and cache all HTML templates at startup
+	// parse and cache all html templates
 	tmpl, err := handler.NewTemplateRenderer("./templates")
 	if err != nil {
 		log.Fatalf("template error: %v", err)
 	}
 
-	// inject dependencies into the single Auth handler
+	// inject dependencies
 	authHandler := handler.NewAuthHandler(
 		userRepo,
 		bookingClient,

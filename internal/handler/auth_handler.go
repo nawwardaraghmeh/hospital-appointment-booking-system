@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-// AuthHandler handles all UI-facing routes: registration, login, logout, and all patient/admin pages
+// handle the dependencies: registration, login, logout, and all patient/admin pages
 type AuthHandler struct {
 	userRepo        repository.UserRepository
 	bookingClient   *bookingclient.Client
@@ -20,7 +20,7 @@ type AuthHandler struct {
 	tmpl            TemplateRenderer
 }
 
-// NewAuthHandler constructs an AuthHandler with all required dependencies
+// create an AuthHandler with all required dependencies
 func NewAuthHandler(
 	userRepo repository.UserRepository,
 	bookingClient *bookingclient.Client,
@@ -37,12 +37,12 @@ func NewAuthHandler(
 	}
 }
 
-// HomePage serves the main landing page
+// the main landing page
 func (h *AuthHandler) HomePage(w http.ResponseWriter, r *http.Request) {
 	h.tmpl.Render(w, "index.html", nil)
 }
 
-// RegisterPage renders the patient registration form
+// the patient registration form
 func (h *AuthHandler) RegisterPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -51,14 +51,13 @@ func (h *AuthHandler) RegisterPage(w http.ResponseWriter, r *http.Request) {
 	h.tmpl.Render(w, "register.html", nil)
 }
 
-// RegisterAction processes patient registration
+// process and validate patient registration
 func (h *AuthHandler) RegisterAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Validate input
 	registerInput := &validation.PatientRegisterInput{
 		Username: r.FormValue("username"),
 		Password: r.FormValue("password"),
@@ -92,7 +91,7 @@ func (h *AuthHandler) RegisterAction(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// AdminRegisterPage renders the hidden admin registration form
+// the hidden admin registration form
 func (h *AuthHandler) AdminRegisterPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -109,14 +108,13 @@ func (h *AuthHandler) AdminRegisterPage(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// AdminRegisterAction processes admin registration
+// process and validate admin registration
 func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Validate input
 	adminInput := &validation.AdminRegisterInput{
 		Username:   r.FormValue("username"),
 		Password:   r.FormValue("password"),
@@ -159,7 +157,7 @@ func (h *AuthHandler) AdminRegisterAction(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// LoginPage renders the unified login form
+// the shared login form
 func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -189,7 +187,7 @@ func (h *AuthHandler) LoginPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// LoginAction authenticates the user and sets the session cookie
+// authenticate the user and set the session cookie
 func (h *AuthHandler) LoginAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -230,7 +228,7 @@ func (h *AuthHandler) LoginAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Logout destroys the session cookie
+// destroy the session cookie upon logout
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "abs_session",
@@ -243,7 +241,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// AdminDashboard renders the admin panel
+// the admin dashboard
 func (h *AuthHandler) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -282,7 +280,7 @@ func (h *AuthHandler) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AddSlot forwards a new timeslot to the Booking Service
+// process and validate a new timeslot before sending it to the booking service
 func (h *AuthHandler) AddSlot(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -295,7 +293,6 @@ func (h *AuthHandler) AddSlot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate input
 	timeslotInput := &validation.TimeslotInput{
 		DepartmentID: r.FormValue("department_id"),
 		Doctor:       r.FormValue("doctor"),
@@ -352,7 +349,7 @@ func (h *AuthHandler) AddSlot(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
 
-// SlotsPage fetches available slots from the Booking Service and renders them
+// fetche available slots
 func (h *AuthHandler) SlotsPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		h.tmpl.RenderError(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -377,7 +374,6 @@ func (h *AuthHandler) SlotsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Both calls go over HTTP to the Booking Service
 	deptName, hospName, err := h.bookingClient.FindDepartmentWithHospital(deptID)
 	if err != nil {
 		h.tmpl.RenderError(w, "Could not load department info from Booking Service", http.StatusBadGateway)
@@ -407,7 +403,7 @@ func (h *AuthHandler) SlotsPage(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// BookPage renders the booking form (GET) and submits the booking (POST)
+// the booking form (GET). and validate and submit the booking (POST)
 func (h *AuthHandler) BookPage(w http.ResponseWriter, r *http.Request) {
 	slotIDStr := r.URL.Query().Get("slot_id")
 	slotID, _ := strconv.Atoi(slotIDStr)
@@ -419,7 +415,6 @@ func (h *AuthHandler) BookPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		// Validate input
 		bookingInput := &validation.BookingInput{
 			Name:     r.FormValue("name"),
 			AgeStr:   r.FormValue("age"),
@@ -443,7 +438,6 @@ func (h *AuthHandler) BookPage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Convert age after validation
 		age, _ := strconv.Atoi(bookingInput.AgeStr)
 
 		appt := entity.Appointment{

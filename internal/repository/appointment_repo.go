@@ -7,18 +7,19 @@ import (
 	"fmt"
 )
 
-// AppointmentRepository defines database operations for appointments
+// define database operations for appointments
 type AppointmentRepository interface {
 	Create(a entity.Appointment) error
 	FindByPatientID(patientID string) ([]entity.BookingView, error)
 }
 
+// prepared stmt to find appointments by patient id
 type appointmentRepository struct {
 	db                *sql.DB
 	stmtFindByPatient *sql.Stmt
 }
 
-// NewAppointmentRepository creates an AppointmentRepository with prepared statements
+// creates an AppointmentRepository with prepared statements
 func NewAppointmentRepository(db *sql.DB) (AppointmentRepository, error) {
 	stmtFind, err := db.Prepare(
 		`SELECT t.doctor, t.start_time, t.room, a.symptoms, d.name
@@ -36,7 +37,7 @@ func NewAppointmentRepository(db *sql.DB) (AppointmentRepository, error) {
 	}, nil
 }
 
-// Create atomically claims the timeslot (only if not already booked) and inserts the appointment
+// claim the timeslot, if not already booked, and insert the appointment
 func (r *appointmentRepository) Create(a entity.Appointment) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -73,7 +74,7 @@ func (r *appointmentRepository) Create(a entity.Appointment) error {
 	return nil
 }
 
-// FindByPatientID returns all appointments booked by a given patient
+// return all appointments booked by a given patient
 func (r *appointmentRepository) FindByPatientID(patientID string) ([]entity.BookingView, error) {
 	rows, err := r.stmtFindByPatient.Query(patientID)
 	if err != nil {

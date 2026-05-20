@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Config holds all configurable values loaded from the environment
+// hold all configurable values loaded from the environment
 type Config struct {
 	AuthPort              string
 	BookingPort           string
@@ -18,7 +18,7 @@ type Config struct {
 	SessionDuration       int
 }
 
-// Load reads configuration from a .env file
+// read configuration from a .env file
 func Load() (*Config, error) {
 	loadDotEnv(".env")
 
@@ -45,7 +45,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// loadDotEnv parses a .env file and sets each key=value as an environment variable
+// read .env file and sets each key=value as an environment variable
 func loadDotEnv(path string) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -71,6 +71,7 @@ func loadDotEnv(path string) {
 	}
 }
 
+// get environment variable, if any, otherwise return default value
 func getEnv(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		return v

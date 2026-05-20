@@ -2,7 +2,7 @@ package repository
 
 import "database/sql"
 
-// SeedData populates the database with initial cities, hospitals, and departments
+// populate the database with sample cities, hospitals, and departments
 func SeedData(db *sql.DB) error {
 	cities := []string{"Rome", "Milan", "Naples", "Florence"}
 	for _, name := range cities {

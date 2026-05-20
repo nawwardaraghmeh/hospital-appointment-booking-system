@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// ClearSessionCookie instructs the browser to immediately expire the session cookie
+// delete the session cookie by setting an expired cookie
 func ClearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "abs_session",
@@ -18,7 +18,7 @@ func ClearSessionCookie(w http.ResponseWriter) {
 	})
 }
 
-// GetSessionCookie parses the session cookie (format: role:userID:hospitalID)
+// parse the session cookie following the format: role:userID:hospitalID
 func GetSessionCookie(r *http.Request) (role string, userID int, hospitalID int, ok bool) {
 	c, err := r.Cookie("abs_session")
 	if err != nil {
@@ -36,7 +36,7 @@ func GetSessionCookie(r *http.Request) (role string, userID int, hospitalID int,
 	return parts[0], uid, hid, true
 }
 
-// RequireSession protects a route, allowing only the specified role through
+// protect a route. check if session cookie exists, and has the allowed role
 func RequireSession(next http.HandlerFunc, allowedRole string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		role, _, _, ok := GetSessionCookie(r)

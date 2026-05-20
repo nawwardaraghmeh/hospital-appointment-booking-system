@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// LocationRepository handles read operations for cities, hospitals, and departments
+// handle read operations for cities, hospitals, and departments
 type LocationRepository interface {
 	AllCities() ([]entity.City, error)
 	AllHospitals() ([]entity.Hospital, error)
@@ -17,24 +17,24 @@ type LocationRepository interface {
 }
 
 type locationRepository struct {
-	db                       *sql.DB
-	stmtAllCities            *sql.Stmt
-	stmtAllHospitals         *sql.Stmt
-	stmtAllDepartments       *sql.Stmt
-	stmtDeptsByHospital      *sql.Stmt
-	stmtDeptWithHospital     *sql.Stmt
-	stmtHospitalNameByUser   *sql.Stmt
+	db                     *sql.DB
+	stmtAllCities          *sql.Stmt
+	stmtAllHospitals       *sql.Stmt
+	stmtAllDepartments     *sql.Stmt
+	stmtDeptsByHospital    *sql.Stmt
+	stmtDeptWithHospital   *sql.Stmt
+	stmtHospitalNameByUser *sql.Stmt
 }
 
-// NewLocationRepository constructs a LocationRepository with all statements prepared
+// create a LocationRepository with all statements prepared
 func NewLocationRepository(db *sql.DB) (LocationRepository, error) {
 	stmts := map[string]string{
-		"cities":        `SELECT id, name FROM city ORDER BY name`,
-		"hospitals":     `SELECT id, name, city_id FROM hospital ORDER BY name`,
-		"departments":   `SELECT id, name, hospital_id FROM department ORDER BY name`,
-		"deptsByHosp":   `SELECT id, name FROM department WHERE hospital_id = ? ORDER BY name`,
-		"deptWithHosp":  `SELECT d.name, h.name FROM department d JOIN hospital h ON d.hospital_id = h.id WHERE d.id = ?`,
-		"hospByUser":    `SELECT u.full_name, h.name FROM users u JOIN hospital h ON u.hospital_id = h.id WHERE u.id = ?`,
+		"cities":       `SELECT id, name FROM city ORDER BY name`,
+		"hospitals":    `SELECT id, name, city_id FROM hospital ORDER BY name`,
+		"departments":  `SELECT id, name, hospital_id FROM department ORDER BY name`,
+		"deptsByHosp":  `SELECT id, name FROM department WHERE hospital_id = ? ORDER BY name`,
+		"deptWithHosp": `SELECT d.name, h.name FROM department d JOIN hospital h ON d.hospital_id = h.id WHERE d.id = ?`,
+		"hospByUser":   `SELECT u.full_name, h.name FROM users u JOIN hospital h ON u.hospital_id = h.id WHERE u.id = ?`,
 	}
 
 	prepared := make(map[string]*sql.Stmt, len(stmts))
@@ -57,6 +57,7 @@ func NewLocationRepository(db *sql.DB) (LocationRepository, error) {
 	}, nil
 }
 
+// retrieve all cities
 func (r *locationRepository) AllCities() ([]entity.City, error) {
 	rows, err := r.stmtAllCities.Query()
 	if err != nil {
@@ -78,6 +79,7 @@ func (r *locationRepository) AllCities() ([]entity.City, error) {
 	return cities, nil
 }
 
+// retrieve all hospitals
 func (r *locationRepository) AllHospitals() ([]entity.Hospital, error) {
 	rows, err := r.stmtAllHospitals.Query()
 	if err != nil {
@@ -99,6 +101,7 @@ func (r *locationRepository) AllHospitals() ([]entity.Hospital, error) {
 	return hospitals, nil
 }
 
+// retrieve all departments
 func (r *locationRepository) AllDepartments() ([]entity.Department, error) {
 	rows, err := r.stmtAllDepartments.Query()
 	if err != nil {
@@ -120,6 +123,7 @@ func (r *locationRepository) AllDepartments() ([]entity.Department, error) {
 	return depts, nil
 }
 
+// retrieve departments for a specific hospital
 func (r *locationRepository) DepartmentsByHospital(hospitalID string) ([]entity.Department, error) {
 	rows, err := r.stmtDeptsByHospital.Query(hospitalID)
 	if err != nil {
@@ -141,6 +145,7 @@ func (r *locationRepository) DepartmentsByHospital(hospitalID string) ([]entity.
 	return depts, nil
 }
 
+// retrieve department name and its hospital name by department id
 func (r *locationRepository) FindDepartmentWithHospital(departmentID string) (string, string, error) {
 	var deptName, hospName string
 	err := r.stmtDeptWithHospital.QueryRow(departmentID).Scan(&deptName, &hospName)
@@ -150,6 +155,7 @@ func (r *locationRepository) FindDepartmentWithHospital(departmentID string) (st
 	return deptName, hospName, nil
 }
 
+// retrieve hospital name and admin name by user id
 func (r *locationRepository) FindHospitalNameByUserID(userID string) (string, string, error) {
 	var adminName, hospitalName string
 	err := r.stmtHospitalNameByUser.QueryRow(userID).Scan(&adminName, &hospitalName)

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// ValidationError holds a list of user-facing error messages
+// hold a list of error messages
 type ValidationError struct {
 	Messages []string
 }
@@ -22,7 +22,7 @@ func (e *ValidationError) Add(msg string) {
 	e.Messages = append(e.Messages, msg)
 }
 
-// PatientRegisterInput validates the public registration form
+// validate the public/patient registration form
 type PatientRegisterInput struct {
 	Username string
 	Password string
@@ -43,7 +43,7 @@ func (i *PatientRegisterInput) Validate() *ValidationError {
 	return ve
 }
 
-// AdminRegisterInput validates the hidden admin registration form
+// validate the hidden/admin registration form
 type AdminRegisterInput struct {
 	Username   string
 	Password   string
@@ -72,7 +72,7 @@ func (i *AdminRegisterInput) Validate(expectedAdminCode string) *ValidationError
 	return ve
 }
 
-// BookingInput holds and validates the appointment booking form fields
+// validate the appointment booking form
 type BookingInput struct {
 	Name     string
 	AgeStr   string
@@ -102,7 +102,7 @@ func (i *BookingInput) Validate() (*BookingInput, *ValidationError) {
 	return i, ve
 }
 
-// TimeslotInput holds and validates the add-slot form fields
+// validate the add-slot form
 type TimeslotInput struct {
 	DepartmentID string
 	Doctor       string

@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-// Client communicates with the Booking Service REST API
+// used by the frontend to call the booking service api
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
 }
 
-// New creates a Client that calls the Booking Service
+// create a Client that calls the Booking service
 func New(baseURL string) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
@@ -26,7 +26,7 @@ func New(baseURL string) *Client {
 	}
 }
 
-// AllCities returns all cities from the Booking Service
+// return all cities from the booking Service
 func (c *Client) AllCities() ([]entity.City, error) {
 	var result []entity.City
 	if err := c.get("/api/cities", &result); err != nil {
@@ -35,7 +35,7 @@ func (c *Client) AllCities() ([]entity.City, error) {
 	return result, nil
 }
 
-// AllHospitals returns all hospitals from the Booking Service
+// return all hospitals
 func (c *Client) AllHospitals() ([]entity.Hospital, error) {
 	var result []entity.Hospital
 	if err := c.get("/api/hospitals", &result); err != nil {
@@ -44,7 +44,7 @@ func (c *Client) AllHospitals() ([]entity.Hospital, error) {
 	return result, nil
 }
 
-// AllDepartments returns all departments from the Booking Service
+// return all departments
 func (c *Client) AllDepartments() ([]entity.Department, error) {
 	var result []entity.Department
 	if err := c.get("/api/departments", &result); err != nil {
@@ -53,7 +53,7 @@ func (c *Client) AllDepartments() ([]entity.Department, error) {
 	return result, nil
 }
 
-// DepartmentsByHospital returns departments for a specific hospital
+// return departments for a specific hospital
 func (c *Client) DepartmentsByHospital(hospitalID int) ([]entity.Department, error) {
 	var result []entity.Department
 	if err := c.get("/api/departments?hospital_id="+strconv.Itoa(hospitalID), &result); err != nil {
@@ -62,7 +62,7 @@ func (c *Client) DepartmentsByHospital(hospitalID int) ([]entity.Department, err
 	return result, nil
 }
 
-// FindDepartmentWithHospital returns the department and hospital name for a dept ID
+// return the department and hospital name for a dept id
 func (c *Client) FindDepartmentWithHospital(deptID string) (deptName, hospName string, err error) {
 	var result struct {
 		DepartmentName string `json:"department_name"`
@@ -74,7 +74,7 @@ func (c *Client) FindDepartmentWithHospital(deptID string) (deptName, hospName s
 	return result.DepartmentName, result.HospitalName, nil
 }
 
-// FindHospitalNameByUserID returns the admin name and hospital name for a given user ID
+// return the admin name and hospital name for a given user id
 func (c *Client) FindHospitalNameByUserID(userID int) (adminName, hospitalName string, err error) {
 	var result struct {
 		AdminName    string `json:"admin_name"`
@@ -86,7 +86,7 @@ func (c *Client) FindHospitalNameByUserID(userID int) (adminName, hospitalName s
 	return result.AdminName, result.HospitalName, nil
 }
 
-// FindAvailableByDepartment returns unbooked slots for a department
+// return unbooked slots for a department
 func (c *Client) FindAvailableByDepartment(deptID string) ([]entity.Timeslot, error) {
 	var result []entity.Timeslot
 	if err := c.get("/api/slots?department_id="+deptID+"&available=true", &result); err != nil {
@@ -95,7 +95,7 @@ func (c *Client) FindAvailableByDepartment(deptID string) ([]entity.Timeslot, er
 	return result, nil
 }
 
-// FindAllByHospital returns all slots for a hospital (admin view)
+// return all slots for a hospital (admin dashboard)
 func (c *Client) FindAllByHospital(hospitalID int) ([]entity.Timeslot, error) {
 	var result []entity.Timeslot
 	if err := c.get("/api/slots?hospital_id="+strconv.Itoa(hospitalID), &result); err != nil {
@@ -104,7 +104,7 @@ func (c *Client) FindAllByHospital(hospitalID int) ([]entity.Timeslot, error) {
 	return result, nil
 }
 
-// FindDepartmentIDBySlotID returns the department ID string for a slot
+// return the department id string for a slot
 func (c *Client) FindDepartmentIDBySlotID(slotID int) (string, error) {
 	var result struct {
 		DepartmentID string `json:"department_id"`
@@ -115,7 +115,7 @@ func (c *Client) FindDepartmentIDBySlotID(slotID int) (string, error) {
 	return result.DepartmentID, nil
 }
 
-// CreateSlot asks the Booking Service to create a new timeslot
+// ask the booking service to create a new timeslot
 func (c *Client) CreateSlot(departmentID, doctor, room, startTime string, duration int) error {
 	body := fmt.Sprintf(
 		`{"department_id":%q,"doctor":%q,"room":%q,"start_time":%q,"duration":%d}`,
@@ -124,7 +124,7 @@ func (c *Client) CreateSlot(departmentID, doctor, room, startTime string, durati
 	return c.post("/api/slots", body)
 }
 
-// MyAppointments returns a patient's booked appointments
+// return a patient's booked appointments
 func (c *Client) MyAppointments(patientID int) ([]entity.BookingView, error) {
 	var result []entity.BookingView
 	if err := c.get("/api/appointments?patient_id="+strconv.Itoa(patientID), &result); err != nil {
@@ -133,7 +133,7 @@ func (c *Client) MyAppointments(patientID int) ([]entity.BookingView, error) {
 	return result, nil
 }
 
-// Reserve sends a booking request to the Booking Service
+// send a booking request to the Booking Service
 func (c *Client) Reserve(appt entity.Appointment) error {
 	body := fmt.Sprintf(
 		`{"timeslot_id":%d,"patient_id":%q,"patient_name":%q,"age":%d,"phone":%q,"email":%q,"symptoms":%q}`,
@@ -142,7 +142,7 @@ func (c *Client) Reserve(appt entity.Appointment) error {
 	return c.post("/api/appointments", body)
 }
 
-// HTTP helpers
+// helper functions to make GET and POST requests to the booking service
 func (c *Client) get(path string, out interface{}) error {
 	resp, err := c.httpClient.Get(c.baseURL + path)
 	if err != nil {

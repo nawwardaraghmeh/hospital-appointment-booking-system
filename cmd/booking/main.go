@@ -30,7 +30,7 @@ func main() {
 		log.Fatalf("SeedData error: %v", err)
 	}
 
-	// build all repositories the Booking Service needs
+	// build all repositories needed
 	locationRepo, err := repository.NewLocationRepository(db)
 	if err != nil {
 		log.Fatalf("location repo error: %v", err)
@@ -43,15 +43,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("appointment repo error: %v", err)
 	}
-	userRepo, err := repository.NewUserRepository(db)
-	if err != nil {
-		log.Fatalf("user repo error: %v", err)
-	}
 
 	bookingSvc := service.NewBookingService(apptRepo)
-	_ = userRepo
 
-	// wire all routes onto the Booking Service API handler
+	// create api handler with all dependencies
 	apiHandler := bookingapi.New(locationRepo, slotRepo, bookingSvc)
 
 	mux := http.NewServeMux()

@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-// UserRepository defines all database operations related to users
+// define all database operations related to users
 type UserRepository interface {
 	Create(username, passwordHash, role, fullName string, hospitalID interface{}) error
 	FindByUsername(username string) (*entity.User, error)
@@ -20,7 +20,7 @@ type userRepository struct {
 	stmtByID       *sql.Stmt
 }
 
-// NewUserRepository constructs a UserRepository and prepares all statements
+// create a UserRepository and prepare all statements
 func NewUserRepository(db *sql.DB) (UserRepository, error) {
 	stmtCreate, err := db.Prepare(
 		`INSERT INTO users (username, password_hash, role, full_name, hospital_id)
@@ -50,6 +50,7 @@ func NewUserRepository(db *sql.DB) (UserRepository, error) {
 	}, nil
 }
 
+// add a new user
 func (r *userRepository) Create(username, passwordHash, role, fullName string, hospitalID interface{}) error {
 	_, err := r.stmtCreate.Exec(username, passwordHash, role, fullName, hospitalID)
 	if err != nil {
@@ -58,6 +59,7 @@ func (r *userRepository) Create(username, passwordHash, role, fullName string, h
 	return nil
 }
 
+// find user by username, for login validation
 func (r *userRepository) FindByUsername(username string) (*entity.User, error) {
 	u := &entity.User{}
 	err := r.stmtByUsername.QueryRow(username).Scan(&u.ID, &u.PasswordHash, &u.Role, &u.HospitalID)
@@ -67,6 +69,7 @@ func (r *userRepository) FindByUsername(username string) (*entity.User, error) {
 	return u, nil
 }
 
+// find user by id, for token validation
 func (r *userRepository) FindByID(id string) (*entity.User, error) {
 	u := &entity.User{}
 	err := r.stmtByID.QueryRow(id).Scan(&u.ID, &u.FullName, &u.HospitalID)

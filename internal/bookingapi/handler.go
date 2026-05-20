@@ -10,14 +10,14 @@ import (
 	"strings"
 )
 
-// Handler handles all Booking Service API routes
+// holds dependencies for the booking api
 type Handler struct {
 	locationRepo repository.LocationRepository
 	slotRepo     repository.TimeslotRepository
 	bookingSvc   service.BookingService
 }
 
-// New constructs a Handler with all required dependencies
+// create a Handler with all required dependencies
 func New(
 	locationRepo repository.LocationRepository,
 	slotRepo repository.TimeslotRepository,
@@ -30,7 +30,7 @@ func New(
 	}
 }
 
-// RegisterRoutes wires all API routes onto mux
+// registers all api routes to the given ServeMux
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/cities", h.cities)
 	mux.HandleFunc("/api/hospitals", h.hospitals)
@@ -42,7 +42,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/appointments", h.appointments)
 }
 
-// location endpoints
+// handler methods for each endpoint
 func (h *Handler) cities(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -93,7 +93,7 @@ func (h *Handler) departments(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, depts)
 }
 
-// departmentDetail handles GET /api/departments/{id}/hospital
+// handle GET /api/departments/{id}/hospital
 func (h *Handler) departmentDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -117,7 +117,7 @@ func (h *Handler) departmentDetail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// adminHospital handles GET /api/admin/{userID}/hospital
+// handle GET /api/admin/{userID}/hospital
 func (h *Handler) adminHospital(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -153,6 +153,7 @@ func (h *Handler) slots(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handle GET /api/slots?department_id={id} or /api/slots?hospital_id={id}
 func (h *Handler) getSlots(w http.ResponseWriter, r *http.Request) {
 	if deptID := r.URL.Query().Get("department_id"); deptID != "" {
 		slots, err := h.slotRepo.FindAvailableByDepartment(deptID)
@@ -177,6 +178,7 @@ func (h *Handler) getSlots(w http.ResponseWriter, r *http.Request) {
 	writeError(w, "department_id or hospital_id query param required", http.StatusBadRequest)
 }
 
+// handle POST /api/slots to create a new timeslot
 func (h *Handler) createSlot(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		DepartmentID string `json:"department_id"`
@@ -197,7 +199,7 @@ func (h *Handler) createSlot(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// slotDetail handles GET /api/slots/{id}/department
+// handle GET /api/slots/{id}/department
 func (h *Handler) slotDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -231,6 +233,7 @@ func (h *Handler) appointments(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handle GET /api/appointments?patient_id={id}
 func (h *Handler) getAppointments(w http.ResponseWriter, r *http.Request) {
 	patientID := r.URL.Query().Get("patient_id")
 	appts, err := h.bookingSvc.MyAppointments(patientID)
@@ -241,6 +244,7 @@ func (h *Handler) getAppointments(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, appts)
 }
 
+// handle POST /api/appointments to create a new appointment
 func (h *Handler) createAppointment(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		TimeSlotID  int    `json:"timeslot_id"`
@@ -278,12 +282,13 @@ func (h *Handler) createAppointment(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// helpers
+// helper function to write JSON responses
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
 }
 
+// helper function to write JSON errors
 func writeError(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

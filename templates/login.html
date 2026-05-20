@@ -1,6 +1,12 @@
 {{define "content"}}
 <div class="card center-card">
     <h2>Welcome to HABS</h2>
+
+    {{if .Error}}
+    <div class="alert alert-error">
+        {{.Error}}
+    </div>
+    {{end}}
     <p class="muted small" style="margin-bottom: 16px;">
         Enter your credentials. You will be redirected based on your account role.
     </p>
